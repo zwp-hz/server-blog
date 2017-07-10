@@ -4,6 +4,7 @@ const request = require('request');
 const http = require('http');
 const db = require('./db');
 const common = require('./common');
+const parseString = require('xml2js').parseString;
 
 //必应每日壁纸
 router.get('/api/bing', (req,res) => {
@@ -120,7 +121,7 @@ router.get('/api/getArticlesList', (req,res) => {
 let getWeatherInfo = (ip, cb) => {
     let sina_server = 'http://int.dpool.sina.com.cn/iplookup/iplookup.php?format=json&ip=' + ip,
     	weather_server = 'http://wthrcdn.etouch.cn/WeatherApi?citykey=',
-    	weatherJson = {wendu: /<wendu>(\S*)<\/wendu>/g,sunrise_1: /<sunrise_1>(\S*)<\/sunrise_1>/g,sunset_1: /<sunset_1>(\S*)<\/sunset_1>/g,type: /<type>([\u4e00-\u9fa5]*)<\/type>/g};
+    	weatherJson = {};
 
     http.get(sina_server, (res) => {
         if (res && res.statusCode == 200) {
@@ -135,25 +136,24 @@ let getWeatherInfo = (ip, cb) => {
 				        gzip: true
 				  	},(error, response, data) => {
 				  		if (!error && response && response.statusCode == 200) {
+				  			
+				  			parseString(data, function (err, result) {
+				  				weatherJson = result.resp;
+							});
 
-				  			//中文转换拼音
-				  			for (var i in weatherJson) {
-				  				weatherJson[i] = data.match(weatherJson[i]);
-				  				
-				  				if(i === "type")
-				  					weatherJson[i].splice(2,10);
+				  			//天气添加汉字拼音
+				  			weatherJson.forecast.forEach((item,i) => {
+				  				item.weather.forEach((items,j) => {
+				  					for (var y in items) {
 
-				  				weatherJson[i].forEach((item,j) => {
-				  					if (i === "type") {
-				  						weatherJson[i][j] = common.getInitials(item.replace(new RegExp("(<wendu>|<\/wendu>|<sunrise_1>|<\/sunrise_1>|<sunset_1>|<\/sunset_1>|<type>|<\/type>)","g"),""));
-				  					} else {
-				  						weatherJson[i] = item.replace(new RegExp("(<wendu>|<\/wendu>|<sunrise_1>|<\/sunrise_1>|<sunset_1>|<\/sunset_1>|<type>|<\/type>)","g"),"");
+				  						if (y == "day" || y == "night") {
+				  							items[y][0]["type_py"] = common.getInitials(items[y][0].type[0]);
+				  						}
 				  					}
 				  				});
-				  			}
+				  			});
 
 				  			weatherJson.time = new Date().getTime();
-				  			weatherJson.city = param.city;
 
 				  			cb(error,weatherJson)
 				  		} else {
