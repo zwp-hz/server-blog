@@ -8,7 +8,7 @@ const parseString = require('xml2js').parseString;
 
 //必应每日壁纸
 router.get('/api/bing', (req,res) => {
-	let proxy_url = 'http://cn.bing.com/HPImageArchive.aspx?idx=0&n=1';
+	let proxy_url = 'http://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1';
   	let options = {
         url: proxy_url,
         headers: {"Connection": "close"},
@@ -18,11 +18,13 @@ router.get('/api/bing', (req,res) => {
 
 	request(options, (error, response, data) => {
 		if (!error && response && response.statusCode == 200) {
-	        let imgs = data.match(/<url>(\S*)<\/url>/g);
+			let imgs = "http://www.bing.com/" + data.images[0].url
+			console.log(imgs)
+	        // let imgs = data.match(/<url>(\S*)<\/url>/g);
 
-	        imgs.forEach((item,i) => {
-	        	imgs[i] = "http://images.ioliu.cn/bing/" + item.replace(/(<url>\/az\/hprichbg\/rb\/|<\/url>)/g,'').replace(/1366x768/g,'1920x1080');
-	        })
+	        // imgs.forEach((item,i) => {
+	        // 	imgs[i] = "http://images.ioliu.cn/bing/" + item.replace(/(<url>\/az\/hprichbg\/rb\/|<\/url>)/g,'').replace(/1366x768/g,'1920x1080');
+	        // })
 	        return res.status(200).jsonp({code: 0,data: imgs,message: "成功"}).end();
 	    }
 	});
