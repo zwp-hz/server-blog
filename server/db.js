@@ -23,8 +23,8 @@ const articleSchema = new Schema({
   images_src: Array,
   browsing: Number,
   review: Number,
-  creation_at: Date,
-  update_at: Date
+  creation_at: Number,
+  update_at: Number
 })
 
 const Models = {
