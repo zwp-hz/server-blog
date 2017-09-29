@@ -6,7 +6,10 @@ const db = require('./db');
 const common = require('./common');
 const parseString = require('xml2js').parseString;
 
-//必应每日壁纸
+/**
+ * 必应每日壁纸
+ * @return {壁纸url}
+ */
 router.get('/api/bing', (req,res) => {
 	let proxy_url = 'http://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1';
   	let options = {
@@ -25,7 +28,11 @@ router.get('/api/bing', (req,res) => {
 	});
 });
 
-//获取天气信息
+/**
+ * 获取天气信息
+ * @param {req} 		请求相关信息  用于获取请求网络的ip
+ * @return {当前城市的天气信息}
+ */
 router.get('/api/getWeather',(req,res) => {
     var ip = req.headers['x-real-ip'] ? req.headers['x-real-ip'] : req.ip.replace(/::ffff:/, '');
     ip = "115.236.163.114";
@@ -39,7 +46,10 @@ router.get('/api/getWeather',(req,res) => {
 	})
 })
 
-//获取分类列表
+/**
+ * 获取分类列表
+ * @return {分类列表}
+ */
 router.get('/api/getCategoryList', (req,res) => {
 	db.Category.find((err, doc) => {
 		if (doc) {
@@ -50,7 +60,10 @@ router.get('/api/getCategoryList', (req,res) => {
 	})
 })
 
-//获取标签列表
+/**
+ * 获取标签列表
+ * @return {标签列表}
+ */
 router.get('/api/getTagsList', (req,res) => {
 	db.Tag.find((err, doc) => {
 		if (doc) {
@@ -61,21 +74,28 @@ router.get('/api/getTagsList', (req,res) => {
 	})
 })
 
-//获取文章列表
+/**
+ * 获取文章列表
+ * @param {_id} 			文章id	（用于获取文章详情）
+ * @param {categories} 		类别
+ * @param {searchCnt} 		搜索内容
+ * @param {type} 			hot: "最新更改文章", categories: "文章类别"
+ * @param {page} 			第几页 默认为1
+ * @param {per_page} 		没页个数 默认为10
+ * @return {文章列表}
+ */
 router.get('/api/getArticlesList', (req,res) => {
-	let per_page = 10, countNum = 0,
+	let per_page = Number(req.param("per_page") || 10), 
+		countNum = 0,	//文章总数
 		criteria = {}, fields = {}, options = {sort: {browsing: -1},limit: per_page},
 		categories = req.param("categories"),
 		searchCnt = req.param("searchCnt"),
 		_id = req.param("_id"),
 		reg = new RegExp(searchCnt, 'i'),
-		page = Number(req.param("page"));
+		page = Number(req.param("page") || 1);
 
-	/**
-	  * @type 	hot: "最新更改文章", categories: "文章类别"
-	 */
 	if (_id) {
-		criteria = {_id: _id};	
+		criteria = {_id: _id};
 		//增加访问数
 		db.Article.update(criteria,{$inc: {browsing: 1}},(err, doc) => {});
 	} else if (req.param("type") === "hot") {
@@ -97,7 +117,6 @@ router.get('/api/getArticlesList', (req,res) => {
 
 	//获取文章
 	db.Article.count(criteria,(err, doc) => {
-		//文章总数
 		countNum = doc;
 
 		db.Article.find(criteria,fields,options,(error, data) => {
@@ -114,8 +133,12 @@ router.get('/api/getArticlesList', (req,res) => {
 	})
 })
 
-//获取天气信息
-let getWeatherInfo = (ip, cb) => {
+/**
+ * 获取天气信息
+ * @param {id} 			请求的ip地址
+ * @param {fn} 			回调函数
+ */
+let getWeatherInfo = (ip, fn) => {
     let sina_server = 'http://int.dpool.sina.com.cn/iplookup/iplookup.php?format=json&ip=' + ip,
     	weather_server = 'http://wthrcdn.etouch.cn/WeatherApi?citykey=',
     	weatherJson = {};
@@ -152,19 +175,19 @@ let getWeatherInfo = (ip, cb) => {
 
 				  			weatherJson.time = new Date().getTime();
 
-				  			cb(error,weatherJson)
+				  			fn(error,weatherJson)
 				  		} else {
-				  			cb(error);
+				  			fn(error);
 				  		}
 				  	});
                 } catch (err) {
-                    cb(err);
+                    fn(err);
                 }
             });
         } else {
-            cb({ code: code });
+            fn({ code: code });
         }
-    }).on('error', (e) => { cb(e); });
+    }).on('error', (e) => { fn(e); });
 };
 
 module.exports = router;
