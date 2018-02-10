@@ -378,19 +378,13 @@ router.get('/api/getArticlesList', (req,res) => {
 	}
 
 	// 获取文章总数
-	let getCountNum = () => {
-		return new Promise(function (resolve, reject) {
-	        db.Article.count(criteria,(error, doc) => {
-				countNum = doc;
-				resolve();
-			});
-	    })
-	}
+	db.Article.count(criteria,(error, doc) => {
+		countNum = doc;
+		getDetail();
+	});
 
-	(async () => {
-	    await getCountNum();
-
-	    // 区分。详情获取和列表获取
+	let getDetail = () => {
+		// 区分。详情获取和列表获取
 	    if (_id || type === 'edit') {
 			db.Article[_id ? 'findOne' : 'find'](criteria,fields,options).populate('review').exec((err, result) => {
 				callback(err,res,result,_id ? result : {
@@ -410,7 +404,23 @@ router.get('/api/getArticlesList', (req,res) => {
 				},["获取列表成功","数据有误"]);
 			});
 		}
-	})();
+	};
+
+	
+	// let getCountNum = () => {
+	// 	return new Promise(function (resolve, reject) {
+	//         db.Article.count(criteria,(error, doc) => {
+	// 			countNum = doc;
+	// 			resolve();
+	// 		});
+	//     })
+	// }
+
+	// (async () => {
+	//     await getCountNum();
+			// return
+	    
+	// })();
 });
 
 /**
