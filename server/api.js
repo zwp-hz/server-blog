@@ -241,7 +241,7 @@ router.post('/api/upload', (req, res, next) => {
  * 	limit 					返回的最大文件数量
  * 	type 					区分是否添加指定目录分隔符。  默认为false
  */
-router.post('/api/getQiniuList', (req,res) => {
+router.get('/api/getQiniuList', (req,res) => {
 	let options = req.body.type ? { delimiter: ':' } : {},
 		prefix = req.body.prefix;
 
