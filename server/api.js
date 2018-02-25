@@ -76,7 +76,7 @@ router.get('/api/bing', (req,res) => {
         json: true
   	};
 
-	request(options, (err,result,data) => {
+	requenst(options, (err,result,data) => {
 	    callback(err,res,result,data,["获取图片成功","数据有误"]);
 	});
 });
@@ -121,7 +121,7 @@ router.get('/api/getTagsList', (req,res) => {
  * @return {评论列表}
  */
  router.get('/api/getCommentList', (req,res) => {
-	db.Comment.find({_id: req.param('id')},(err, result) => {
+	db.Comment.find({_id: req.query.id},(err, result) => {
 		callback(err,res,result,result,["获取列表成功","数据有误"]);	
 	})
 });
@@ -132,8 +132,8 @@ router.get('/api/getTagsList', (req,res) => {
   * @param {commentId}		评论id
  */
  router.get('/api/deleteComment', (req,res) => {
- 	let articleId = req.param('articleId'),
- 		commentId = req.param('commentId');
+ 	let articleId = req.query.articleId,
+ 		commentId = req.query.commentId;
 
 	db.Comment.remove({_id: commentId},(err) => {
 		if (!err) {
@@ -156,9 +156,9 @@ router.get('/api/setComment', (req,res) => {
 
     getCityInfo(ip, (param) => {
     	let data = {
-    		article_id: req.param('id'),
-	 		content: req.param('content'),
-	 		email: req.param('email'),
+    		article_id: req.query.id,
+	 		content: req.query.content,
+	 		email: req.query.email,
 	 		ip: ip,
 	 		city: param.province+" "+param.city,
 	 		creation_at: Date.parse(new Date())
@@ -166,14 +166,14 @@ router.get('/api/setComment', (req,res) => {
 
 		let comment = new db.Comment(data);
 
-		if (!req.param('content')) {
+		if (!req.query.content) {
 			res.status(200).jsonp({code: 1,data: {},message: '评论内容不能为空！'}).end();
 			return;
 		}
 
 		comment.save((err,result) => {
 			if (!err) {
-				db.Article.update({_id: req.param('id')},{$addToSet: {
+				db.Article.update({_id: req.query.id},{$addToSet: {
 					review: result._id
 				}}, (error) => {
 					callback(error,res,result,result,["评论成功","评论失败"]);
@@ -242,10 +242,10 @@ router.post('/api/upload', (req, res, next) => {
  * 	type 					区分是否添加指定目录分隔符。  默认为false
  */
 router.get('/api/getQiniuList', (req,res) => {
-	let options = req.body.type ? { delimiter: ':' } : {},
-		prefix = req.body.prefix;
+	let options = req.query.type ? { delimiter: ':' } : {},
+		prefix = req.query.prefix;
 
-	bucketManager.listPrefix(bucket, Object.assign(options,req.body), (err, respBody, respInfo) => {
+	bucketManager.listPrefix(bucket, Object.assign(options,req.query), (err, respBody, respInfo) => {
 		if (respBody.commonPrefixes) {
 			respBody.commonPrefixes.forEach( (item,i) => {
 				respBody.commonPrefixes[i] = item.replace(prefix,'');
@@ -340,14 +340,14 @@ router.post('/api/operateArticles',(req,res) => {
  * @return {文章列表}
  */
 router.get('/api/getArticlesList', (req,res) => {
-	let _id = req.param("_id"),															// 文章ID
-		categories = req.param("categories"),											// 文章类别
-		searchCnt = req.param("searchCnt"),												// 文章搜索内容
-		per_page = Number(req.param("per_page") || 10),									// 每页个数
-		page = Number(req.param("page") || 1),											// 获取第几页文章列表	
-		type = req.param("type") || '',													// 请求类型
+	let _id = req.query._id,															// 文章ID
+		categories = req.query.categories,												// 文章类别
+		searchCnt = req.query.searchCnt,												// 文章搜索内容
+		per_page = Number(req.query.per_page || 10),									// 每页个数
+		page = Number(req.query.page || 1),												// 获取第几页文章列表	
+		type = req.query.type || '',													// 请求类型
 		countNum = 0,																	// 文章总数
-		criteria = req.param('release') ? {release: req.param('release')} : {},			// 查询条件
+		criteria = req.query.release ? {release: req.query.release} : {},				// 查询条件
 		fields = {},																	// 控制返回的字段
 		options = {sort: {browsing: -1},limit: per_page},								// 控制选项
 		reg = new RegExp(searchCnt, 'i');												// 搜索正则匹配
