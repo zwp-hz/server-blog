@@ -76,7 +76,7 @@ router.get('/api/bing', (req,res) => {
         json: true
   	};
 
-	requenst(options, (err,result,data) => {
+	request(options, (err,result,data) => {
 	    callback(err,res,result,data,["获取图片成功","数据有误"]);
 	});
 });
@@ -219,6 +219,9 @@ router.post('/api/login', (req,res) => {
 router.post('/api/upload', (req, res, next) => {
     // 七牛相关配置信息
     let client = qn.create(common.qn_config);
+
+    console.log(req.body);
+
     // 上传单个文件
     upload.single('file')(req, res, (err) => {
         if (err) {
