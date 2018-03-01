@@ -38,8 +38,9 @@ router.use(session({
 }));
 
 // 跨服权限
+const headers_url = 'http://localhost';
 router.all('*', function(req, res, next) {
-	if( req.headers.origin == 'http://localhost:3000' || req.headers.origin == 'http://localhost:8080' ){
+	if( req.headers.origin == headers_url + ':3000' || req.headers.origin == headers_url + ':8080' ){
 		res.header('Access-Control-Allow-Origin', req.headers.origin);
 	    res.header('Access-Control-Allow-Credentials', true);
 	  	res.header('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild');
