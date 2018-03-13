@@ -148,7 +148,7 @@ router.get('/api/getTagsList', (req,res) => {
 /**
  * 发表评论
  * @param {content}		内容
- * @param {email}		邮箱
+ * @param {nickname}		昵称
  * @return {status}
  */
 router.get('/api/setComment', (req,res) => {
@@ -159,7 +159,7 @@ router.get('/api/setComment', (req,res) => {
     	let data = {
     		article_id: req.query.id,
 	 		content: req.query.content,
-	 		email: req.query.email,
+	 		nickname: req.query.nickname,
 	 		ip: ip,
 	 		city: param.province+" "+param.city,
 	 		creation_at: Date.parse(new Date())

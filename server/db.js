@@ -36,7 +36,7 @@ const articleSchema = new Schema({
 
 const commentSchema = new Schema({
     content: String,
-    email: String,
+    nickname: String,
     ip: String,
     city: String,
     creation_at: Number
