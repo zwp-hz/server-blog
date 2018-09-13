@@ -1,28 +1,29 @@
 {
-  "name": "server-blog",
-  "description": "博客接口",
-  "version": "1.0.0",
-  "author": "zwp <zhuweipeng@kuaiqiangche.com>",
-  "private": true,
-  "scripts": {
-    "server": "supervisor ./server/server"
-  },
-  "dependencies": {
-    "body-parser": "^1.18.2",
-    "cookie-parser": "^1.4.3",
-    "express": "^4.14.0",
-    "express-session": "^1.15.6",
-    "mongoose": "^4.9.2",
-    "multer": "^1.3.0",
-    "qiniu": "^7.1.2",
-    "qn": "^1.3.0",
-    "request": "^2.80.0"
-  },
-  "devDependencies": {
-    "babel-core": "^6.0.0",
-    "babel-loader": "^6.0.0",
-    "babel-preset-es2015": "^6.0.0",
-    "webpack": "^3.1.0",
-    "xml2js": "^0.4.17"
-  }
+    "name": "server-blog",
+    "description": "博客接口",
+    "version": "1.0.0",
+    "author": "zwp <zhuweipeng@kuaiqiangche.com>",
+    "private": true,
+    "scripts": {
+        "dev": "cross-env NODE_ENV=development supervisor ./server/server",
+        "online": "cross-env NODE_ENV=production supervisor ./server/server"
+    },
+    "dependencies": {
+        "body-parser": "^1.18.2",
+        "cookie-parser": "^1.4.3",
+        "express": "^4.14.0",
+        "express-session": "^1.15.6",
+        "mongoose": "^4.9.2",
+        "multer": "^1.3.0",
+        "qiniu": "^7.1.2",
+        "qn": "^1.3.0",
+        "request": "^2.80.0"
+    },
+    "devDependencies": {
+        "babel-core": "^6.0.0",
+        "babel-loader": "^6.0.0",
+        "babel-preset-es2015": "^6.0.0",
+        "webpack": "^3.1.0",
+        "xml2js": "^0.4.17"
+    }
 }

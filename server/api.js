@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const request = require('request');
-const http = require('http');
 const db = require('./db');
 const common = require('./common');
 const parseString = require('xml2js').parseString;
@@ -38,7 +37,7 @@ router.use(session({
 }));
 
 // 跨服权限
-const headers_url = 'http://localhost';
+const headers_url = process.env.NODE_ENV === "production" ? '' : 'http://localhost';
 router.all('*', function(req, res, next) {
     if (req.headers.origin == headers_url + ':3000' || req.headers.origin == headers_url + ':8080') {
         res.header('Access-Control-Allow-Origin', req.headers.origin);
@@ -51,11 +50,11 @@ router.all('*', function(req, res, next) {
 
 /**
  * 接口回调
- * err 			错误信息
- * res 			路由请求 result
- * result		第三方接口、mongodb请求 result
- * data 		请求成功返回数据 {}
- * message 		提示信息 ["登录成功"，"账号或密码不正确"，"请求失败"]
+ * @param {err}     错误信息
+ * @param {res}     路由请求 result
+ * @param {result}  第三方接口、mongodb请求 result
+ * @param {data}    请求成功返回数据 {}
+ * @param {message} 提示信息 ["登录成功"，"账号或密码不正确"，"请求失败"]
  */
 const callback = (err, res, result, data, message) => {
     // 请求状态  0：请求成功  1：数据不存在  2：接口报错
@@ -84,11 +83,12 @@ router.get('/api/bing', (req, res) => {
 
 /**
  * 获取天气信息
- * @param {req} 		请求相关信息  用于获取请求网络的ip
+ * @param {req}     请求相关信息  用于获取请求网络的ip
  * @return {当前城市的天气信息}
  */
 router.get('/api/getWeather', (req, res) => {
     let ip = req.headers['x-real-ip'] ? req.headers['x-real-ip'] : req.ip.replace(/::ffff:/, '');
+
     ip = ip === '::1' ? "115.236.163.114" : ip;
 
     getWeatherInfo(ip, function(err, result, data) {
@@ -118,7 +118,7 @@ router.get('/api/getTagsList', (req, res) => {
 
 /**
  * 获取评论列表
- * @param {id}	 文章id
+ * @param {id}  文章id
  * @return {评论列表}
  */
 router.get('/api/getCommentList', (req, res) => {
@@ -129,8 +129,8 @@ router.get('/api/getCommentList', (req, res) => {
 
 /**
  * 删除评论
- * @param {articleId}		文章id
- * @param {commentId}		评论id
+ * @param {articleId}   文章id
+ * @param {commentId}   评论id
  */
 router.get('/api/deleteComment', (req, res) => {
     let articleId = req.query.articleId,
@@ -147,8 +147,8 @@ router.get('/api/deleteComment', (req, res) => {
 
 /**
  * 发表评论
- * @param {content}		内容
- * @param {nickname}		昵称
+ * @param {content}     内容
+ * @param {nickname}    昵称
  * @return {status}
  */
 router.get('/api/setComment', (req, res) => {
@@ -188,7 +188,7 @@ router.get('/api/setComment', (req, res) => {
 
 /**
  * 登录验证
- * @param {token}		token
+ * @param {token}   token
  * @return {status}
  */
 router.get('/api/isLogin', (req, res) => {
@@ -199,8 +199,8 @@ router.get('/api/isLogin', (req, res) => {
 
 /**
  * 登录
- * @param {username}		用户名
- * @param {password}		密码
+ * @param {username}    用户名
+ * @param {password}    密码
  * @return {status}
  */
 router.post('/api/login', (req, res) => {
@@ -240,10 +240,10 @@ router.post('/api/upload', (req, res, next) => {
 });
 
 /**
- *	获取七牛资源列表
- * 	prefix 					文件前缀
- * 	limit 					返回的最大文件数量
- * 	type 					区分是否添加指定目录分隔符。  默认为false
+ * 获取七牛资源列表
+ * @param {prefix}   文件前缀
+ * @param {limit}    返回的最大文件数量
+ * @param {type}     区分是否添加指定目录分隔符。  默认为false
  */
 router.get('/api/getQiniuList', (req, res) => {
     let options = req.query.type ? { delimiter: ':' } : {},
@@ -265,8 +265,8 @@ router.get('/api/getQiniuList', (req, res) => {
 });
 
 /**
- *	删除七牛对应空间中的文件
- * key 						文件名
+ * 删除七牛对应空间中的文件
+ * @param {key} 文件名
  */
 router.post('/api/delete_qiniu', (req, res) => {
     let key = req.body.key;
@@ -278,13 +278,13 @@ router.post('/api/delete_qiniu', (req, res) => {
 
 /**
  * 添加、编辑、删除文章
- * @param {_id} 			文章id (编辑标示)
- * @param {title} 			标题
- * @param {categories} 		类别
- * @param {tags} 			标签
- * @param {images_src} 		封面图
- * @param {content} 		文章内容
- * @param {type}            操作类型  save：添加。 update：编辑。 remove：删除。
+ * @param {_id}         文章id (编辑标示)
+ * @param {title}       标题
+ * @param {categories}  类别
+ * @param {tags}        标签
+ * @param {images_src}  封面图
+ * @param {content}     文章内容
+ * @param {type}        操作类型  save：添加。 update：编辑。 remove：删除。
  * @return {status}
  */
 router.post('/api/operateArticles', (req, res) => {
@@ -334,13 +334,13 @@ router.post('/api/operateArticles', (req, res) => {
 
 /**
  * 获取文章列表
- * @param {_id} 			文章id	（用于获取文章详情）
- * @param {categories} 		类别
- * @param {searchCnt} 		搜索内容
- * @param {release} 		用于草稿文章的显示隐藏  false：显示  true：隐藏  默认为false 
- * @param {type} 			hot: "最新更改文章", categories: "文章类别", edit: '后台查看  不计入浏览器次数、获取评论数据',
- * @param {page} 			第几页 默认为1
- * @param {per_page} 		每页个数 默认为10
+ * @param {_id}         文章id（用于获取文章详情）
+ * @param {categories}  类别
+ * @param {searchCnt}   搜索内容
+ * @param {release}     用于草稿文章的显示隐藏  false：显示  true：隐藏 默认为false
+ * @param {type}        hot: "最新更改文章", categories: "文章类别", edit: '后台查看  不计入浏览器次数、获取评论数据',
+ * @param {page}        第几页 默认为1
+ * @param {per_page}    每页个数 默认为10
  * @return {文章列表}
  */
 router.get('/api/getArticlesList', (req, res) => {
@@ -429,16 +429,17 @@ router.get('/api/getArticlesList', (req, res) => {
 
 /**
  * 获取天气信息
- * @param {id} 			请求的ip地址
- * @param {fn} 			回调函数
+ * @param {id}  请求的ip地址
+ * @param {fn}  回调函数
  */
 const getWeatherInfo = (ip, fn) => {
     getCityInfo(ip, (param) => {
         let weather_server = 'http://wthrcdn.etouch.cn/WeatherApi?citykey=',
-            weatherJson = {};
+            weatherJson = {},
+            reg = /省|市/g;
 
         request({
-            url: weather_server + common.cityKey[param.province][param.city],
+            url: weather_server + common.cityKey[param.province.replace(reg, '')][param.city.replace(reg, '')],
             headers: { "Connection": "close" },
             method: "GET",
             gzip: true
@@ -474,19 +475,29 @@ const getWeatherInfo = (ip, fn) => {
 
 /**
  * 获取城市信息
- * @param {id} 			请求的ip地址
- * @param {fn} 			回调函数
+ * @param {id}  请求的ip地址
+ * @param {fn}  回调函数
  */
 const getCityInfo = (ip, fn) => {
-    let sina_server = 'http://int.dpool.sina.com.cn/iplookup/iplookup.php?format=json&ip=' + ip;
-    http.get(sina_server, (res) => {
-        if (res && res && res.statusCode == 200) {
-            res.on('data', function(data) {
-                let param = JSON.parse(data);
-                if (fn) fn(param);
-            });
-        }
+    let options = {
+        url: 'http://api.map.baidu.com/location/ip?ak=GlfVlFKSc6Y7aSr73IHM3lQI&ip=' + ip,
+        headers: { "Connection": "close" },
+        method: "GET",
+        json: true
+    };
+
+    request(options, (err, result, data) => {
+        if (fn) fn(data.content.address_detail)
     });
+
+    // http.get(sina_server, (res) => {
+    //     if (res && res.statusCode == 200) {
+    //         res.on('data', function(data) {
+    //             console.log(data)
+    //             if (fn) fn(data);
+    //         });
+    //     }
+    // });
 }
 
 module.exports = router;
