@@ -1,84 +1,120 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const request = require('request');
-const db = require('./db');
-const common = require('./common');
-const parseString = require('xml2js').parseString;
-const bodyParser = require('body-parser');
-const crypto = require('crypto');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
+const request = require("request");
+const db = require("./db");
+const common = require("./common");
+const parseString = require("xml2js").parseString;
+const bodyParser = require("body-parser");
+const crypto = require("crypto");
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
 
 // 七牛资源管理
 const qiniu = require("qiniu");
-const qn = require('qn');
-const upload = require('./common').upload;
+const qn = require("qn");
+const upload = require("./common").upload;
 
-var mac = new qiniu.auth.digest.Mac(common.qn_config.accessKey, common.qn_config.secretKey),
-    config = new qiniu.conf.Config();
+var mac = new qiniu.auth.digest.Mac(
+    common.qn_config.accessKey,
+    common.qn_config.secretKey
+  ),
+  config = new qiniu.conf.Config();
 
 config.zone = qiniu.zone.Zone_z0;
 var bucketManager = new qiniu.rs.BucketManager(mac, config),
-    bucket = common.qn_config.bucket;
+  bucket = common.qn_config.bucket;
 
 // 对body进行解析
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true }));
 
-router.use(cookieParser('blog'));
-router.use(session({
-    secret: 'blog', //用来对session id相关的cookie进行签名
-    key: 'session', //定义session的name
+router.use(cookieParser("blog"));
+router.use(
+  session({
+    secret: "blog", //用来对session id相关的cookie进行签名
+    key: "session", //定义session的name
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 30 // 有效期，30天
+      maxAge: 1000 * 60 * 60 * 24 * 30 // 有效期，30天
     },
     resave: true, // 是否每次都重新保存会话
     saveUninitialized: true // 是否自动保存未初始化的会话
-}));
+  })
+);
 
 // 跨服权限
-const headers_url = process.env.NODE_ENV === "production" ? '' : 'http://localhost';
-router.all('*', function(req, res, next) {
-    if (req.headers.origin == headers_url + ':3000' || req.headers.origin == headers_url + ':8080') {
-        res.header('Access-Control-Allow-Origin', req.headers.origin);
-        res.header('Access-Control-Allow-Credentials', true);
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild');
-        res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
-    }
-    next();
+const url = process.env.NODE_ENV === "production" ? "*.zhuweipeng.top" : "*";
+
+router.all("*", function(req, res, next) {
+  let path = req._parsedOriginalUrl.path;
+
+  origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : url;
+
+  res.header("Access-Control-Allow-Origin", origin);
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
+  );
+  res.header("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
+  next();
 });
 
 /**
  * 接口回调
  * @param {err}     错误信息
- * @param {res}     路由请求 result
+ * @param {res}     请求来源
  * @param {result}  第三方接口、mongodb请求 result
  * @param {data}    请求成功返回数据 {}
  * @param {message} 提示信息 ["登录成功"，"账号或密码不正确"，"请求失败"]
  */
 const callback = (err, res, result, data, message) => {
-    // 请求状态  0：请求成功  1：数据不存在  2：接口报错
-    let status = err ? 2 : result ? 0 : 1;
+  // 请求状态  0：请求成功  1：数据不存在  2：接口报错
+  let status = err ? 2 : result ? 0 : 1;
 
-    return res.status(status === 2 ? 500 : 200).jsonp({ code: status, data: (status === 0 ? data : {}), message: status === 2 ? err.message : message[status] }).end();
-}
+  return res
+    .status(status === 2 ? 500 : 200)
+    .jsonp({
+      code: status,
+      data: status === 0 ? data : {},
+      message: status === 2 ? err.message : message[status]
+    })
+    .end();
+};
+
+/**
+ * 请求失败回调
+ * @param {res}     请求来源
+ * @param {message} 错误提示
+ *
+ * @return
+ */
+const errorCallback = (res, message = "请求失败") => {
+  return res
+    .status(200)
+    .jsonp({
+      code: 1,
+      data: {},
+      message: message
+    })
+    .end();
+};
 
 /**
  * 必应每日壁纸
  * @return {壁纸url}
  */
-router.get('/api/bing', (req, res) => {
-    let proxy_url = 'http://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1';
-    let options = {
-        url: proxy_url,
-        headers: { "Connection": "close" },
-        method: "GET",
-        json: true
-    };
+router.post("/api/bing", (req, res) => {
+  let proxy_url = "http://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1";
+  let options = {
+    url: proxy_url,
+    headers: { Connection: "close" },
+    method: "GET",
+    json: true
+  };
 
-    request(options, (err, result, data) => {
-        callback(err, res, result, data, ["获取图片成功", "数据有误"]);
-    });
+  request(options, (err, result, data) => {
+    callback(err, res, result, data, ["获取图片成功", "数据有误"]);
+  });
 });
 
 /**
@@ -86,45 +122,34 @@ router.get('/api/bing', (req, res) => {
  * @param {req}     请求相关信息  用于获取请求网络的ip
  * @return {当前城市的天气信息}
  */
-router.get('/api/getWeather', (req, res) => {
-    let ip = req.headers['x-real-ip'] ? req.headers['x-real-ip'] : req.ip.replace(/::ffff:/, '');
+router.post("/api/getWeather", (req, res) => {
+  let ip = req.headers["x-real-ip"]
+    ? req.headers["x-real-ip"]
+    : req.ip.replace(/::ffff:/, "");
 
-    ip = ip === '::1' ? "115.236.163.114" : ip;
+  ip = ip === "::1" ? "115.236.163.114" : ip;
 
-    getWeatherInfo(ip, function(err, result, data) {
-        callback(err, res, result, data, ["获取天气成功", "数据有误"]);
-    })
+  getCityInfo(ip, res);
 });
 
 /**
  * 获取分类列表
  * @return {分类列表}
  */
-router.get('/api/getCategoryList', (req, res) => {
-    db.Category.find((err, result) => {
-        callback(err, res, result, result, ["获取列表成功", "数据有误"]);
-    })
+router.post("/api/getCategoryList", (req, res) => {
+  db.Category.find((err, result) => {
+    callback(err, res, result, result, ["获取列表成功", "数据有误"]);
+  });
 });
 
 /**
  * 获取标签列表
  * @return {标签列表}
  */
-router.get('/api/getTagsList', (req, res) => {
-    db.Tag.find((err, result) => {
-        callback(err, res, result, result, ["获取列表成功", "数据有误"]);
-    })
-});
-
-/**
- * 获取评论列表
- * @param {id}  文章id
- * @return {评论列表}
- */
-router.get('/api/getCommentList', (req, res) => {
-    db.Comment.find({ _id: req.query.id }, (err, result) => {
-        callback(err, res, result, result, ["获取列表成功", "数据有误"]);
-    })
+router.post("/api/getTagsList", (req, res) => {
+  db.Tag.find((err, result) => {
+    callback(err, res, result, result, ["获取列表成功", "数据有误"]);
+  });
 });
 
 /**
@@ -132,17 +157,21 @@ router.get('/api/getCommentList', (req, res) => {
  * @param {articleId}   文章id
  * @param {commentId}   评论id
  */
-router.get('/api/deleteComment', (req, res) => {
-    let articleId = req.query.articleId,
-        commentId = req.query.commentId;
+router.post("/api/deleteComment", (req, res) => {
+  let articleId = req.body.articleId,
+    commentId = req.body.commentId;
 
-    db.Comment.remove({ _id: commentId }, (err) => {
-        if (!err) {
-            db.Article.update({ _id: articleId }, { $pull: { review: commentId } }, (error, result) => {
-                callback(error, res, result, {}, ["删除成功", "删除失败"]);
-            });
+  db.Comment.remove({ _id: commentId }, err => {
+    if (!err) {
+      db.Article.update(
+        { _id: articleId },
+        { $pull: { review: commentId } },
+        (error, result) => {
+          callback(error, res, result, {}, ["删除成功", "删除失败"]);
         }
-    })
+      );
+    }
+  });
 });
 
 /**
@@ -151,51 +180,56 @@ router.get('/api/deleteComment', (req, res) => {
  * @param {nickname}    昵称
  * @return {status}
  */
-router.get('/api/setComment', (req, res) => {
-    let ip = req.headers['x-real-ip'] ? req.headers['x-real-ip'] : req.ip.replace(/::ffff:/, '');
-    ip = ip === '::1' ? "115.236.163.114" : ip;
+router.post("/api/setComment", (req, res) => {
+  let ip = req.headers["x-real-ip"]
+    ? req.headers["x-real-ip"]
+    : req.ip.replace(/::ffff:/, "");
+  ip = ip === "::1" ? "115.236.163.114" : ip;
 
-    getCityInfo(ip, (param) => {
-        let data = {
-            article_id: req.query.id,
-            content: req.query.content,
-            nickname: req.query.nickname,
-            ip: ip,
-            city: param.province + " " + param.city,
-            creation_at: Date.parse(new Date())
-        }
+  getCityInfo(ip, res, cityInfo => {
+    let data = {
+      article_id: req.body.id,
+      content: req.body.content,
+      nickname: req.body.nickname,
+      ip: ip,
+      city: cityInfo.region + " " + cityInfo.city,
+      creation_at: Date.parse(new Date())
+    };
 
-        let comment = new db.Comment(data);
+    let comment = new db.Comment(data);
 
-        if (!req.query.content) {
-            res.status(200).jsonp({ code: 1, data: {}, message: '评论内容不能为空！' }).end();
-            return;
-        }
+    if (!req.body.content) {
+      errorCallback(res, "评论内容不能为空！");
+    }
 
-        comment.save((err, result) => {
-            if (!err) {
-                db.Article.update({ _id: req.query.id }, {
-                    $addToSet: {
-                        review: result._id
-                    }
-                }, (error) => {
-                    callback(error, res, result, result, ["评论成功", "评论失败"]);
-                });
+    comment.save((err, result) => {
+      if (!err) {
+        db.Article.update(
+          { _id: req.body.id },
+          {
+            $addToSet: {
+              review: result._id
             }
-        });
+          },
+          error => {
+            callback(error, res, result, result, ["评论成功", "评论失败"]);
+          }
+        );
+      }
     });
-})
+  });
+});
 
 /**
  * 登录验证
  * @param {token}   token
  * @return {status}
  */
-router.get('/api/isLogin', (req, res) => {
-    db.User.findOne({ token: req.session.token }, (err, result) => {
-        callback(err, res, result, result, ["获取成功", "用户不存在"]);
-    });
-})
+router.post("/api/isLogin", (req, res) => {
+  db.User.findOne({ token: req.session.token }, (err, result) => {
+    callback(err, res, result, result, ["获取成功", "用户不存在"]);
+  });
+});
 
 /**
  * 登录
@@ -203,40 +237,44 @@ router.get('/api/isLogin', (req, res) => {
  * @param {password}    密码
  * @return {status}
  */
-router.post('/api/login', (req, res) => {
-    let md5 = crypto.createHash('md5');
-    md5.update(req.body.password);
-    let d = md5.digest('hex');
+router.post("/api/login", (req, res) => {
+  let md5 = crypto.createHash("md5");
+  md5.update(req.body.password);
+  let d = md5.digest("hex");
 
-    db.User.findOne({ username: req.body.username, token: d }, (err, result) => {
-        if (!err && result) req.session.token = result.token;
+  db.User.findOne({ username: req.body.username, token: d }, (err, result) => {
+    if (!err && result) req.session.token = result.token;
 
-        callback(err, res, result, {}, ["登录成功", "账号或密码不正确"]);
-    });
-})
+    callback(err, res, result, {}, ["登录成功", "账号或密码不正确"]);
+  });
+});
 
 /**
  * 七牛图片上传
  * @return {status}
  */
-router.post('/api/upload', (req, res, next) => {
-    // 七牛相关配置信息
-    let client = qn.create(common.qn_config);
+router.post("/api/upload", (req, res, next) => {
+  // 七牛相关配置信息
+  let client = qn.create(common.qn_config);
 
-    // 上传单个文件
-    upload.single('file')(req, res, (err) => {
-        if (err) {
-            return console.error(err);
+  // 上传单个文件
+  upload.single("file")(req, res, err => {
+    if (err) {
+      return console.error(err);
+    }
+    if (req.file && req.file.buffer) {
+      // 上传到七牛
+      client.upload(
+        req.file.buffer,
+        {
+          key: req.file.originalname
+        },
+        (err, result) => {
+          callback(err, res, result, {}, ["上传成功", "上传失败"]);
         }
-        if (req.file && req.file.buffer) {
-            // 上传到七牛
-            client.upload(req.file.buffer, {
-                key: req.file.originalname
-            }, (err, result) => {
-                callback(err, res, result, {}, ["上传成功", "上传失败"]);
-            });
-        }
-    });
+      );
+    }
+  });
 });
 
 /**
@@ -245,35 +283,39 @@ router.post('/api/upload', (req, res, next) => {
  * @param {limit}    返回的最大文件数量
  * @param {type}     区分是否添加指定目录分隔符。  默认为false
  */
-router.get('/api/getQiniuList', (req, res) => {
-    let options = req.query.type ? { delimiter: ':' } : {},
-        prefix = req.query.prefix;
+router.post("/api/getQiniuList", (req, res) => {
+  let options = req.body.type ? { delimiter: ":" } : {},
+    prefix = req.body.prefix;
 
-    bucketManager.listPrefix(bucket, Object.assign(options, req.query), (err, respBody, respInfo) => {
-        if (respBody.commonPrefixes) {
-            respBody.commonPrefixes.forEach((item, i) => {
-                respBody.commonPrefixes[i] = item.replace(prefix, '');
-            });
-        }
-
-        respBody.items.reverse().forEach((item, i) => {
-            respBody.items[i].img_name = item.key.replace(prefix, '');
+  bucketManager.listPrefix(
+    bucket,
+    Object.assign(options, req.body),
+    (err, respBody, respInfo) => {
+      if (respBody.commonPrefixes) {
+        respBody.commonPrefixes.forEach((item, i) => {
+          respBody.commonPrefixes[i] = item.replace(prefix, "");
         });
+      }
 
-        callback(err, res, respInfo, respBody, ['获取资源成功', respBody, err]);
-    });
+      respBody.items.reverse().forEach((item, i) => {
+        respBody.items[i].img_name = item.key.replace(prefix, "");
+      });
+
+      callback(err, res, respInfo, respBody, ["获取资源成功", respBody, err]);
+    }
+  );
 });
 
 /**
  * 删除七牛对应空间中的文件
  * @param {key} 文件名
  */
-router.post('/api/delete_qiniu', (req, res) => {
-    let key = req.body.key;
+router.post("/api/delete_qiniu", (req, res) => {
+  let key = req.body.key;
 
-    bucketManager.delete(bucket, key, (err, respBody, respInfo) => {
-        callback(err, res, respInfo, respBody, ['删除成功', respBody, err]);
-    });
+  bucketManager.delete(bucket, key, (err, respBody, respInfo) => {
+    callback(err, res, respInfo, respBody, ["删除成功", respBody, err]);
+  });
 });
 
 /**
@@ -287,217 +329,227 @@ router.post('/api/delete_qiniu', (req, res) => {
  * @param {type}        操作类型  save：添加。 update：编辑。 remove：删除。
  * @return {status}
  */
-router.post('/api/operateArticles', (req, res) => {
-    let type = req.body.type,
-        _id = req.body._id,
-        newData = req.body;
+router.post("/api/operateArticles", (req, res) => {
+  let type = req.body.type,
+    _id = req.body._id,
+    newData = req.body;
 
-    delete newData._id;
+  delete newData._id;
 
-    let updataTag = () => {
-        if (type !== '删除') {
-            newData.categories.map((item) => {
-                db.Category.update({ name: item }, { $set: { name: item } }, { upsert: true }, (err, result) => {
-                    if (err) callback(err, res, result, {}, ["", "", "更新分类失败"]);
-                });
-            });
+  let updataTag = () => {
+    if (type !== "删除") {
+      newData.categories.map(item => {
+        db.Category.update(
+          { name: item },
+          { $set: { name: item } },
+          { upsert: true },
+          (err, result) => {
+            if (err) callback(err, res, result, {}, ["", "", "更新分类失败"]);
+          }
+        );
+      });
 
-            newData.tags.map((item) => {
-                db.Tag.update({ name: item }, { $set: { name: item } }, { upsert: true }, (err, result) => {
-                    if (err) callback(err, res, result, {}, ["", "", "更新标签失败"]);
-                });
-            });
-        }
+      newData.tags.map(item => {
+        db.Tag.update(
+          { name: item },
+          { $set: { name: item } },
+          { upsert: true },
+          (err, result) => {
+            if (err) callback(err, res, result, {}, ["", "", "更新标签失败"]);
+          }
+        );
+      });
     }
+  };
 
-    if (type === 'update') {
-        newData.update_at = Date.parse(new Date());
-        db.Article.findOneAndUpdate({ _id: _id }, newData, (err, result) => {
-            if (!err) updataTag();
-            callback(err, res, result, {}, ["更新成功", "数据有误"]);
-        })
-    } else if (type === 'save') {
-        newData.creation_at = Date.parse(new Date());
-        newData.browsing = 0;
-        let article = new db.Article(newData);
-        article.save((err, result) => {
-            if (!err) updataTag();
-            callback(err, res, result, {}, ["添加成功", "数据有误"]);
-        });
-    } else if (type === 'remove') {
-        db.Article.findByIdAndRemove(_id, (err, result) => {
-            callback(err, res, result, {}, ["删除成功", "数据有误"]);
-        })
-    }
+  if (type === "update") {
+    newData.update_at = Date.parse(new Date());
+    db.Article.findOneAndUpdate({ _id: _id }, newData, (err, result) => {
+      if (!err) updataTag();
+      callback(err, res, result, {}, ["更新成功", "数据有误"]);
+    });
+  } else if (type === "save") {
+    newData.creation_at = Date.parse(new Date());
+    newData.browsing = 0;
+    let article = new db.Article(newData);
+    article.save((err, result) => {
+      if (!err) updataTag();
+      callback(err, res, result, {}, ["添加成功", "数据有误"]);
+    });
+  } else if (type === "remove") {
+    db.Article.findByIdAndRemove(_id, (err, result) => {
+      callback(err, res, result, {}, ["删除成功", "数据有误"]);
+    });
+  }
 });
-
 
 /**
  * 获取文章列表
- * @param {_id}         文章id（用于获取文章详情）
  * @param {categories}  类别
  * @param {searchCnt}   搜索内容
  * @param {release}     用于草稿文章的显示隐藏  false：显示  true：隐藏 默认为false
- * @param {type}        hot: "最新更改文章", categories: "文章类别", edit: '后台查看  不计入浏览器次数、获取评论数据',
+ * @param {type}        hot: "最新更改文章", categories: "文章类别"
  * @param {page}        第几页 默认为1
  * @param {per_page}    每页个数 默认为10
  * @return {文章列表}
  */
-router.get('/api/getArticlesList', (req, res) => {
-    let _id = req.query._id, // 文章ID
-        categories = req.query.categories, // 文章类别
-        searchCnt = req.query.searchCnt, // 文章搜索内容
-        per_page = Number(req.query.per_page || 10), // 每页个数
-        page = Number(req.query.page || 1), // 获取第几页文章列表	
-        type = req.query.type || '', // 请求类型
-        countNum = 0, // 文章总数
-        criteria = req.query.release ? { release: req.query.release } : {}, // 查询条件
-        fields = {}, // 控制返回的字段
-        options = { sort: { browsing: -1 }, limit: per_page }, // 控制选项
-        reg = new RegExp(searchCnt, 'i'); // 搜索正则匹配
+router.post("/api/getArticlesList", (req, res) => {
+  let categories = req.body.categories, // 文章类别
+    searchCnt = req.body.searchCnt, // 文章搜索内容
+    per_page = Number(req.body.per_page || 10), // 每页个数
+    page = Number(req.body.page || 1), // 获取第几页文章列表
+    type = req.body.type || "", // 请求类型
+    criteria = req.body.release ? { release: req.body.release } : {}, // 查询条件
+    fields = {}, // 控制返回的字段
+    options = { sort: { browsing: -1 }, limit: per_page }, // 控制选项
+    reg = new RegExp(searchCnt, "i"); // 搜索正则匹配
 
-    if (_id) {
-        criteria._id = _id;
-        //增加访问数  后台请求不加访问数
-        if (type !== 'edit')
-            db.Article.update(criteria, { $inc: { browsing: 1 } }, () => {});
-    } else if (type === "hot") {
-        fields = { title: 1, images_src: 1, categories: 1, review: 1 };
-        options = { sort: { 'update_at': -1 }, limit: 3 };
-    } else if (categories && categories != "全部") {
-        criteria.categories = { $in: [categories] };
-        options.skip = (page - 1) * per_page;
-    } else {
-        options.skip = (page - 1) * per_page;
-    }
+  if (type === "hot") {
+    fields = { title: 1, images_src: 1, categories: 1, review: 1 };
+    options = { sort: { update_at: -1 }, limit: 3 };
+  } else if (categories && categories != "全部") {
+    criteria.categories = { $in: [categories] };
+    options.skip = (page - 1) * per_page;
+  } else {
+    options.skip = (page - 1) * per_page;
+  }
 
-    // 设置搜索条件
-    if (searchCnt) {
-        criteria.$or = [
-            { title: { $regex: reg } },
-            { describe: { $regex: reg } },
-            { categories: { $in: [searchCnt] } },
-            { tags: { $in: [searchCnt] } }
-        ];
-    }
+  // 搜索条件设置
+  if (searchCnt) {
+    criteria.$or = [
+      { title: { $regex: reg } },
+      { describe: { $regex: reg } },
+      { categories: { $in: [searchCnt] } },
+      { tags: { $in: [searchCnt] } }
+    ];
+  }
 
+  new Promise((resolve, reject) => {
     // 获取文章总数
-    db.Article.count(criteria, (error, doc) => {
-        countNum = doc;
-        getDetail();
+    db.Article.count(criteria, (error, countNum) => {
+      if (!error) {
+        resolve(countNum);
+      } else {
+        reject();
+      }
     });
+  })
+    .then(num => {
+      // 获取文章列表
+      db.Article.find(criteria, fields, options)
+        .populate("review")
+        .exec((err, result) => {
+          callback(
+            err,
+            res,
+            result,
+            {
+              current_page: page,
+              data: result,
+              last_page: Math.ceil(num / per_page),
+              countNum: num
+            },
+            ["获取列表成功", "获取列表失败"]
+          );
+        });
+    })
+    .catch(() => {
+      errorCallback(res, "获取文章总数失败!");
+    });
+});
 
-    let getDetail = () => {
-        // 区分。详情获取和列表获取
-        if (_id || type === 'edit') {
-            db.Article[_id ? 'findOne' : 'find'](criteria, fields, options).populate('review').exec((err, result) => {
-                callback(err, res, result, _id ? result : {
-                    current_page: page,
-                    data: result,
-                    last_page: Math.ceil(countNum / per_page),
-                    countNum: countNum
-                }, ["获取详情成功", "数据有误"]);
-            })
-        } else {
-            db.Article.find(criteria, fields, options, (err, result) => {
-                callback(err, res, result, {
-                    current_page: page,
-                    data: result,
-                    last_page: Math.ceil(countNum / per_page),
-                    countNum: countNum
-                }, ["获取列表成功", "数据有误"]);
-            });
-        }
-    };
+/**
+ * 获取文章详情
+ * @param {_id}         文章id（用于获取文章详情）
+ * @param {type}        edit: '后台查看  不计入浏览器次数、获取评论数据',
+ * @return {detail}
+ */
+router.post("/api/getArticlesDetail", (req, res) => {
+  let _id = req.body._id,
+    criteria = req.body.release ? { release: req.body.release } : {}; // 查询条件
 
+  criteria._id = _id;
+  if (req.body.type !== "edit")
+    db.Article.update(criteria, { $inc: { browsing: 1 } }, () => {});
 
-    // let getCountNum = () => {
-    // 	return new Promise(function (resolve, reject) {
-    //         db.Article.count(criteria,(error, doc) => {
-    // 			countNum = doc;
-    // 			resolve();
-    // 		});
-    //     })
-    // }
-
-    // (async () => {
-    //     await getCountNum();
-    // return
-
-    // })();
+  db.Article.findOne(criteria)
+    .populate("review")
+    .exec((err, result) => {
+      callback(err, res, result, result, ["获取详情成功", "获取详情失败"]);
+    });
 });
 
 /**
  * 获取天气信息
- * @param {id}  请求的ip地址
- * @param {fn}  回调函数
+ * @param {cityInfo}  城市信息
+ * @param {res}       请求来源
  */
-const getWeatherInfo = (ip, fn) => {
-    getCityInfo(ip, (param) => {
-        let weather_server = 'http://wthrcdn.etouch.cn/WeatherApi?citykey=',
-            weatherJson = {},
-            reg = /省|市/g;
+const getWeatherInfo = (cityInfo, res) => {
+  let weather_server = "http://wthrcdn.etouch.cn/WeatherApi?citykey=",
+    weatherJson = {};
 
-        request({
-            url: weather_server + common.cityKey[param.province.replace(reg, '')][param.city.replace(reg, '')],
-            headers: { "Connection": "close" },
-            method: "GET",
-            gzip: true
-        }, (error, response, data) => {
-            if (!error) {
-                if (response && response.statusCode == 200) {
-                    parseString(data, function(err, result) {
-                        weatherJson = result.resp;
-                    });
-
-                    //天气添加汉字拼音
-                    weatherJson.forecast.forEach((item, i) => {
-                        item.weather.forEach((items, j) => {
-                            for (var y in items) {
-
-                                if (y == "day" || y == "night") {
-                                    items[y][0]["type_py"] = common.getInitials(items[y][0].type[0]);
-                                }
-                            }
-                        });
-                    });
-
-                    weatherJson.time = new Date().getTime();
-                }
-
-                fn(error, response, weatherJson);
-            } else {
-                fn(error);
-            }
+  request(
+    {
+      url: weather_server + common.cityKey[cityInfo.region][cityInfo.city],
+      headers: { Connection: "close" },
+      method: "GET",
+      gzip: true
+    },
+    (error, response, data) => {
+      if (response && response.statusCode == 200) {
+        parseString(data, function(err, result) {
+          weatherJson = result.resp;
         });
-    });
+
+        //天气添加汉字拼音
+        weatherJson.forecast.forEach((item, i) => {
+          item.weather.forEach((items, j) => {
+            for (var y in items) {
+              if (y == "day" || y == "night") {
+                items[y][0]["type_py"] = common.getInitials(
+                  items[y][0].type[0]
+                );
+              }
+            }
+          });
+        });
+
+        weatherJson.time = new Date().getTime();
+      }
+
+      callback(error, res, response, weatherJson, [
+        "获取天气成功",
+        "获取天气失败"
+      ]);
+    }
+  );
 };
 
 /**
  * 获取城市信息
- * @param {id}  请求的ip地址
- * @param {fn}  回调函数
+ * @param {ip}        请求的ip地址
+ * @param {res}       请求来源
+ * @param {callback}   回调函数
  */
-const getCityInfo = (ip, fn) => {
-    let options = {
-        url: 'http://api.map.baidu.com/location/ip?ak=GlfVlFKSc6Y7aSr73IHM3lQI&ip=' + ip,
-        headers: { "Connection": "close" },
-        method: "GET",
-        json: true
-    };
+const getCityInfo = (ip, res, callback) => {
+  let options = {
+    url: "http://ip.taobao.com/service/getIpInfo.php?ip=" + ip,
+    headers: { Connection: "close" },
+    method: "GET",
+    json: true
+  };
 
-    request(options, (err, result, data) => {
-        if (fn) fn(data.content.address_detail)
-    });
-
-    // http.get(sina_server, (res) => {
-    //     if (res && res.statusCode == 200) {
-    //         res.on('data', function(data) {
-    //             console.log(data)
-    //             if (fn) fn(data);
-    //         });
-    //     }
-    // });
-}
+  request(options, (err, result, data) => {
+    if (!err && data.code === 0) {
+      if (callback) {
+        callback(data.data);
+      } else {
+        getWeatherInfo(data.data, res);
+      }
+    } else {
+      errorCallback(res, "获取城市失败");
+    }
+  });
+};
 
 module.exports = router;
