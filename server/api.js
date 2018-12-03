@@ -529,9 +529,9 @@ const getWeatherInfo = (cityInfo, res) => {
  * 获取城市信息
  * @param {ip}        请求的ip地址
  * @param {res}       请求来源
- * @param {callback}   回调函数
+ * @param {fn}        回调函数
  */
-const getCityInfo = (ip, res, callback) => {
+const getCityInfo = (ip, res, fn) => {
   let options = {
     url: "http://ip.taobao.com/service/getIpInfo.php?ip=" + ip,
     headers: { Connection: "close" },
@@ -541,10 +541,11 @@ const getCityInfo = (ip, res, callback) => {
 
   request(options, (err, result, data) => {
     if (!err && data.code === 0) {
-      if (callback) {
-        callback(data.data);
+      if (fn) {
+        fn(data.data);
       } else {
-        getWeatherInfo(data.data, res);
+        callback(err, res, result, data.data, ["获取城市成功", "获取城市失败"]);
+        // getWeatherInfo(data.data, res);
       }
     } else {
       errorCallback(res, "获取城市失败");
