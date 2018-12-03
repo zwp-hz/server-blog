@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_ENV=development supervisor ./server/server",
-    "online": "cross-env NODE_ENV=production supervisor ./server/server"
+    "online": "cross-env NODE_ENV=production ./server/server"
   },
   "dependencies": {
     "body-parser": "^1.18.2",
