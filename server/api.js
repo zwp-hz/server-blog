@@ -103,7 +103,7 @@ const errorCallback = (res, message = "请求失败") => {
  * 必应每日壁纸
  * @return {壁纸url}
  */
-router.post("/api/bing", (req, res) => {
+router.all("/api/bing", (req, res) => {
   let proxy_url = "http://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1";
   let options = {
     url: proxy_url,
@@ -122,7 +122,7 @@ router.post("/api/bing", (req, res) => {
  * @param {req}     请求相关信息  用于获取请求网络的ip
  * @return {当前城市的天气信息}
  */
-router.post("/api/getWeather", (req, res) => {
+router.all("/api/getWeather", (req, res) => {
   let ip = req.headers["x-real-ip"]
     ? req.headers["x-real-ip"]
     : req.ip.replace(/::ffff:/, "");
