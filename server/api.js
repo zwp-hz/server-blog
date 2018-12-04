@@ -544,8 +544,7 @@ const getCityInfo = (ip, res, fn) => {
       if (fn) {
         fn(data.data);
       } else {
-        callback(err, res, result, data.data, ["获取城市成功", "获取城市失败"]);
-        // getWeatherInfo(data.data, res);
+        getWeatherInfo(data.data, res);
       }
     } else {
       errorCallback(res, "获取城市失败");
