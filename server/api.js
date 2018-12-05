@@ -42,7 +42,7 @@ router.use(
 );
 
 // 跨服权限
-const url = process.env.NODE_ENV === "production" ? "*.zhuweipeng.top" : "*";
+const url = process.env.NODE_ENV === "production" ? "120.79.134.177" : "*";
 
 router.all("*", function(req, res, next) {
   let path = req._parsedOriginalUrl.path;
