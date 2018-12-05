@@ -47,7 +47,7 @@ const url = process.env.NODE_ENV === "production" ? "120.79.134.177" : "*";
 router.all("*", function(req, res, next) {
   let path = req._parsedOriginalUrl.path;
 
-  origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : url;
+  origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : "*";
 
   res.header("Access-Control-Allow-Origin", origin);
   res.header("Access-Control-Allow-Credentials", true);
