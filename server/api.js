@@ -76,7 +76,7 @@ router.all("*", function(req, res, next) {
     req.headers.origin === url ||
     req.headers.origin === url + ":90"
   ) {
-    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
     res.header("Access-Control-Allow-Credentials", true);
     res.header(
       "Access-Control-Allow-Headers",
