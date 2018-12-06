@@ -41,13 +41,35 @@ router.use(
   })
 );
 
-// 跨服权限
-const url = process.env.NODE_ENV === "production" ? "120.79.134.177" : "*";
+// const headers_url =
+//   process.env.NODE_ENV === "production" ? "" : "http://localhost";
+// router.all("*", function(req, res, next) {
+//   if (
+//     req.headers.origin == headers_url + ":3001" ||
+//     req.headers.origin == headers_url + ":8080"
+//   ) {
+//     res.header("Access-Control-Allow-Origin", req.headers.origin);
+//     res.header("Access-Control-Allow-Credentials", true);
+//     res.header(
+//       "Access-Control-Allow-Headers",
+//       "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
+//     );
+//     res.header(
+//       "Access-Control-Allow-Methods",
+//       "PUT, POST, GET, DELETE, OPTIONS"
+//     );
+//   }
+//   next();
+// });
+
+// 跨域配置
+const url =
+  process.env.NODE_ENV === "production" ? "http://www.zhuweipeng.top" : "*";
 
 router.all("*", function(req, res, next) {
   let path = req._parsedOriginalUrl.path;
 
-  origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : "*";
+  origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : url;
 
   res.header("Access-Control-Allow-Origin", origin);
   res.header("Access-Control-Allow-Credentials", true);
