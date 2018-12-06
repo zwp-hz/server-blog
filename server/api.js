@@ -36,7 +36,7 @@ router.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 30 // 有效期，30天
     },
-    resave: true, // 是否每次都重新保存会话
+    resave: false, // 是否每次都重新保存会话
     saveUninitialized: true // 是否自动保存未初始化的会话
   })
 );
@@ -71,13 +71,22 @@ router.all("*", function(req, res, next) {
 
   origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : url;
 
-  res.header("Access-Control-Allow-Origin", origin);
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
-  );
-  res.header("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
+  if (
+    origin === "*" ||
+    req.headers.origin === url ||
+    req.headers.origin === url + ":90"
+  ) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", true);
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
+    );
+    res.header(
+      "Access-Control-Allow-Methods",
+      "PUT, POST, GET, DELETE, OPTIONS"
+    );
+  }
   next();
 });
 
@@ -265,7 +274,9 @@ router.post("/api/login", (req, res) => {
   let d = md5.digest("hex");
 
   db.User.findOne({ username: req.body.username, token: d }, (err, result) => {
-    if (!err && result) req.session.token = result.token;
+    if (!err && result) {
+      req.session.token = result.token;
+    }
 
     callback(err, res, result, {}, ["登录成功", "账号或密码不正确"]);
   });
