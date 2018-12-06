@@ -33,13 +33,18 @@ router.all("*", function(req, res, next) {
   origin =
     req.path === "/api/getWeather" || req.path === "/api/bing" ? "*" : url;
 
-  res.header("Access-Control-Allow-Origin", origin);
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
-  );
-  res.header("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
+  if (origin === "*" || req.headers.origin.indexOf("zhuweipeng.top") != -1) {
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials", true);
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
+    );
+    res.header(
+      "Access-Control-Allow-Methods",
+      "PUT, POST, GET, DELETE, OPTIONS"
+    );
+  }
   next();
 });
 
