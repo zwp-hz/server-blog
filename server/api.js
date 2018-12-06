@@ -5,9 +5,6 @@ const db = require("./db");
 const common = require("./common");
 const parseString = require("xml2js").parseString;
 const bodyParser = require("body-parser");
-const crypto = require("crypto");
-const cookieParser = require("cookie-parser");
-const session = require("express-session");
 
 // 七牛资源管理
 const qiniu = require("qiniu");
@@ -28,65 +25,21 @@ var bucketManager = new qiniu.rs.BucketManager(mac, config),
 router.use(bodyParser.json());
 router.use(bodyParser.urlencoded({ extended: true }));
 
-router.use(cookieParser("blog"));
-router.use(
-  session({
-    secret: "blog", //用来对session id相关的cookie进行签名
-    key: "session", //定义session的name
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 30 // 有效期，30天
-    },
-    resave: false, // 是否每次都重新保存会话
-    saveUninitialized: true // 是否自动保存未初始化的会话
-  })
-);
-
-// const headers_url =
-//   process.env.NODE_ENV === "production" ? "" : "http://localhost";
-// router.all("*", function(req, res, next) {
-//   if (
-//     req.headers.origin == headers_url + ":3001" ||
-//     req.headers.origin == headers_url + ":8080"
-//   ) {
-//     res.header("Access-Control-Allow-Origin", req.headers.origin);
-//     res.header("Access-Control-Allow-Credentials", true);
-//     res.header(
-//       "Access-Control-Allow-Headers",
-//       "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
-//     );
-//     res.header(
-//       "Access-Control-Allow-Methods",
-//       "PUT, POST, GET, DELETE, OPTIONS"
-//     );
-//   }
-//   next();
-// });
-
 // 跨域配置
 const url =
   process.env.NODE_ENV === "production" ? "http://www.zhuweipeng.top" : "*";
 
 router.all("*", function(req, res, next) {
-  let path = req._parsedOriginalUrl.path;
+  origin =
+    req.path === "/api/getWeather" || req.path === "/api/bing" ? "*" : url;
 
-  origin = path === "/api/getWeather" || path === "/api/bing" ? "*" : url;
-
-  if (
-    origin === "*" ||
-    req.headers.origin === url ||
-    req.headers.origin === url + ":90"
-  ) {
-    res.header("Access-Control-Allow-Origin", req.headers.origin);
-    res.header("Access-Control-Allow-Credentials", true);
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
-    );
-    res.header(
-      "Access-Control-Allow-Methods",
-      "PUT, POST, GET, DELETE, OPTIONS"
-    );
-  }
+  res.header("Access-Control-Allow-Origin", origin);
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild"
+  );
+  res.header("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, OPTIONS");
   next();
 });
 
@@ -257,7 +210,7 @@ router.post("/api/setComment", (req, res) => {
  * @return {status}
  */
 router.post("/api/isLogin", (req, res) => {
-  db.User.findOne({ token: req.session.token }, (err, result) => {
+  db.User.findOne({ token: req.body.token }, (err, result) => {
     callback(err, res, result, result, ["获取成功", "用户不存在"]);
   });
 });
@@ -269,17 +222,15 @@ router.post("/api/isLogin", (req, res) => {
  * @return {status}
  */
 router.post("/api/login", (req, res) => {
-  let md5 = crypto.createHash("md5");
-  md5.update(req.body.password);
-  let d = md5.digest("hex");
-
-  db.User.findOne({ username: req.body.username, token: d }, (err, result) => {
-    if (!err && result) {
-      req.session.token = result.token;
+  db.User.findOne(
+    { username: req.body.username, password: req.body.password },
+    (err, result) => {
+      callback(err, res, result, { token: result.token }, [
+        "登录成功",
+        "账号或密码不正确"
+      ]);
     }
-
-    callback(err, res, result, {}, ["登录成功", "账号或密码不正确"]);
-  });
+  );
 });
 
 /**
