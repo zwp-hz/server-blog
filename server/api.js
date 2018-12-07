@@ -489,17 +489,13 @@ const getWeatherInfo = (cityInfo, res) => {
     },
     (error, response, data) => {
       if (response && response.statusCode == 200) {
-        if (!data) {
-          errorCallback(res, "获取天气失败");
+        parseString(data, function(err, result) {
+          weatherJson = result.resp;
+        });
+
+        if (weatherJson.error) {
+          errorCallback(res, weatherJson.error);
         } else {
-          parseString(data, function(err, result) {
-            weatherJson = result.resp;
-          });
-
-          if (weatherJson.error) {
-            errorCallback(res, );
-          }
-
           //天气添加汉字拼音
           weatherJson.forecast.forEach((item, i) => {
             item.weather.forEach((items, j) => {
@@ -512,7 +508,6 @@ const getWeatherInfo = (cityInfo, res) => {
               }
             });
           });
-
           weatherJson.time = new Date().getTime();
         }
       }
