@@ -495,6 +495,7 @@ const getWeatherInfo = (cityInfo, res) => {
 
         if (weatherJson.error) {
           errorCallback(res, weatherJson.error);
+          return false;
         } else {
           //天气添加汉字拼音
           weatherJson.forecast.forEach((item, i) => {
