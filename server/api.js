@@ -33,7 +33,10 @@ router.all("*", function(req, res, next) {
   origin =
     req.path === "/api/getWeather" || req.path === "/api/bing" ? "*" : url;
 
-  if (origin === "*" || req.headers.origin.indexOf("zhuweipeng.top") != -1) {
+  if (
+    origin === "*" ||
+    (req.headers.origin && req.headers.origin.indexOf("zhuweipeng.top") != -1)
+  ) {
     res.header("Access-Control-Allow-Origin", req.headers.origin);
     res.header("Access-Control-Allow-Credentials", true);
     res.header(
@@ -486,24 +489,28 @@ const getWeatherInfo = (cityInfo, res) => {
     },
     (error, response, data) => {
       if (response && response.statusCode == 200) {
-        parseString(data, function(err, result) {
-          weatherJson = result.resp;
-        });
-
-        //天气添加汉字拼音
-        weatherJson.forecast.forEach((item, i) => {
-          item.weather.forEach((items, j) => {
-            for (var y in items) {
-              if (y == "day" || y == "night") {
-                items[y][0]["type_py"] = common.getInitials(
-                  items[y][0].type[0]
-                );
-              }
-            }
+        if (data) {
+          errorCallback(res, "获取天气失败");
+        } else {
+          parseString(data, function(err, result) {
+            weatherJson = result.resp;
           });
-        });
 
-        weatherJson.time = new Date().getTime();
+          //天气添加汉字拼音
+          weatherJson.forecast.forEach((item, i) => {
+            item.weather.forEach((items, j) => {
+              for (var y in items) {
+                if (y == "day" || y == "night") {
+                  items[y][0]["type_py"] = common.getInitials(
+                    items[y][0].type[0]
+                  );
+                }
+              }
+            });
+          });
+
+          weatherJson.time = new Date().getTime();
+        }
       }
 
       callback(error, res, response, weatherJson, [
