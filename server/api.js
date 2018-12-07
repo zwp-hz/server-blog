@@ -489,7 +489,7 @@ const getWeatherInfo = (cityInfo, res) => {
     },
     (error, response, data) => {
       if (response && response.statusCode == 200) {
-        if (data) {
+        if (!data) {
           errorCallback(res, "获取天气失败");
         } else {
           parseString(data, function(err, result) {
