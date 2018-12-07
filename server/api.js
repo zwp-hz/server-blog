@@ -496,6 +496,10 @@ const getWeatherInfo = (cityInfo, res) => {
             weatherJson = result.resp;
           });
 
+          if (weatherJson.error) {
+            errorCallback(res, );
+          }
+
           //天气添加汉字拼音
           weatherJson.forecast.forEach((item, i) => {
             item.weather.forEach((items, j) => {
