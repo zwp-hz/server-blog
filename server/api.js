@@ -316,7 +316,7 @@ router.post("/api/delete_qiniu", (req, res) => {
  * @param {title}       标题
  * @param {categories}  类别
  * @param {tags}        标签
- * @param {images_src}  封面图
+ * @param {image_src}   封面图
  * @param {content}     文章内容
  * @param {type}        操作类型  save：添加。 update：编辑。 remove：删除。
  * @return {status}
@@ -397,7 +397,7 @@ router.post("/api/getArticlesList", (req, res) => {
     reg = new RegExp(searchCnt, "i"); // 搜索正则匹配
 
   if (type === "hot") {
-    fields = { title: 1, images_src: 1, categories: 1, review: 1 };
+    fields = { title: 1, image_src: 1, categories: 1, review: 1 };
     options = { sort: { update_at: -1 }, limit: 3 };
   } else if (categories && categories != "全部") {
     criteria.categories = { $in: [categories] };

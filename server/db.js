@@ -24,7 +24,7 @@ const articleSchema = new Schema({
     content: String,
     categories: Array,
     tags: Array,
-    images_src: Array,
+    image_src: String,
     browsing: Number,
     release: Boolean,
     creation_at: Number,
