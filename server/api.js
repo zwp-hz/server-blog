@@ -149,22 +149,22 @@ router.post("/api/getTagsList", (req, res) => {
  * @param {articleId}   文章id
  * @param {commentId}   评论id
  */
-router.post("/api/deleteComment", (req, res) => {
-  let articleId = req.body.articleId,
-    commentId = req.body.commentId;
+// router.post("/api/deleteComment", (req, res) => {
+//   let articleId = req.body.articleId,
+//     commentId = req.body.commentId;
 
-  db.Comment.remove({ _id: commentId }, err => {
-    if (!err) {
-      db.Article.update(
-        { _id: articleId },
-        { $pull: { review: commentId } },
-        (error, result) => {
-          callback(error, res, result, {}, ["删除成功", "删除失败"]);
-        }
-      );
-    }
-  });
-});
+//   db.Comment.remove({ _id: commentId }, err => {
+//     if (!err) {
+//       db.Article.update(
+//         { _id: articleId },
+//         { $pull: { review: commentId } },
+//         (error, result) => {
+//           callback(error, res, result, {}, ["删除成功", "删除失败"]);
+//         }
+//       );
+//     }
+//   });
+// });
 
 /**
  * 发表评论
@@ -172,45 +172,45 @@ router.post("/api/deleteComment", (req, res) => {
  * @param {nickname}    昵称
  * @return {status}
  */
-router.post("/api/setComment", (req, res) => {
-  let ip = req.headers["x-real-ip"]
-    ? req.headers["x-real-ip"]
-    : req.ip.replace(/::ffff:/, "");
-  ip = ip === "::1" ? "115.236.163.114" : ip;
+// router.post("/api/setComment", (req, res) => {
+//   let ip = req.headers["x-real-ip"]
+//     ? req.headers["x-real-ip"]
+//     : req.ip.replace(/::ffff:/, "");
+//   ip = ip === "::1" ? "115.236.163.114" : ip;
 
-  getCityInfo(ip, res, cityInfo => {
-    let data = {
-      article_id: req.body.id,
-      content: req.body.content,
-      nickname: req.body.nickname,
-      ip: ip,
-      city: cityInfo.region + " " + cityInfo.city,
-      creation_at: Date.parse(new Date())
-    };
+//   getCityInfo(ip, res, cityInfo => {
+//     let data = {
+//       article_id: req.body.id,
+//       content: req.body.content,
+//       nickname: req.body.nickname,
+//       ip: ip,
+//       city: cityInfo.region + " " + cityInfo.city,
+//       creation_at: Date.parse(new Date())
+//     };
 
-    let comment = new db.Comment(data);
+//     let comment = new db.Comment(data);
 
-    if (!req.body.content) {
-      errorCallback(res, "评论内容不能为空！");
-    }
+//     if (!req.body.content) {
+//       errorCallback(res, "评论内容不能为空！");
+//     }
 
-    comment.save((err, result) => {
-      if (!err) {
-        db.Article.update(
-          { _id: req.body.id },
-          {
-            $addToSet: {
-              review: result._id
-            }
-          },
-          error => {
-            callback(error, res, result, result, ["评论成功", "评论失败"]);
-          }
-        );
-      }
-    });
-  });
-});
+//     comment.save((err, result) => {
+//       if (!err) {
+//         db.Article.update(
+//           { _id: req.body.id },
+//           {
+//             $addToSet: {
+//               review: result._id
+//             }
+//           },
+//           error => {
+//             callback(error, res, result, result, ["评论成功", "评论失败"]);
+//           }
+//         );
+//       }
+//     });
+//   });
+// });
 
 /**
  * 登录验证
@@ -380,7 +380,7 @@ router.post("/api/operateArticles", (req, res) => {
  * @param {categories}  类别
  * @param {searchCnt}   搜索内容
  * @param {release}     用于草稿文章的显示隐藏  false：显示  true：隐藏 默认为false
- * @param {type}        hot: "最新更改文章", categories: "文章类别"
+ * @param {type}        categories: "文章类别"
  * @param {page}        第几页 默认为1
  * @param {per_page}    每页个数 默认为10
  * @return {文章列表}
@@ -394,12 +394,10 @@ router.post("/api/getArticlesList", (req, res) => {
     criteria = req.body.release ? { release: req.body.release } : {}, // 查询条件
     fields = {}, // 控制返回的字段
     options = { sort: { browsing: -1 }, limit: per_page }, // 控制选项
-    reg = new RegExp(searchCnt, "i"); // 搜索正则匹配
+    reg = new RegExp(searchCnt, "i"), // 搜索正则匹配
+    hots = []; // 热门文章列表
 
-  if (type === "hot") {
-    fields = { title: 1, image_src: 1, categories: 1, review: 1 };
-    options = { sort: { update_at: -1 }, limit: 3 };
-  } else if (categories && categories != "全部") {
+  if (categories && categories != "全部") {
     criteria.categories = { $in: [categories] };
     options.skip = (page - 1) * per_page;
   } else {
@@ -416,6 +414,16 @@ router.post("/api/getArticlesList", (req, res) => {
     ];
   }
 
+  // 获取热门文章
+  db.Article.find(
+    { release: req.body.release },
+    { title: 1, image_src: 1, categories: 1, review: 1 },
+    { sort: { update_at: -1 }, limit: 3 },
+    (error, result) => {
+      hots = result;
+    }
+  );
+
   new Promise((resolve, reject) => {
     // 获取文章总数
     db.Article.count(criteria, (error, countNum) => {
@@ -427,23 +435,24 @@ router.post("/api/getArticlesList", (req, res) => {
     });
   })
     .then(num => {
-      // 获取文章列表
-      db.Article.find(criteria, fields, options)
-        .populate("review")
-        .exec((err, result) => {
-          callback(
-            err,
-            res,
-            result,
-            {
-              current_page: page,
-              data: result,
-              last_page: Math.ceil(num / per_page),
-              countNum: num
+      // 获取全部文章列表
+      // .populate("review")  根据id 获取关联的评论数据
+      db.Article.find(criteria, fields, options).exec((err, result) => {
+        callback(
+          err,
+          res,
+          result,
+          {
+            current_page: page,
+            data: {
+              hots: hots,
+              list: result
             },
-            ["获取列表成功", "获取列表失败"]
-          );
-        });
+            last_page: Math.ceil(num / per_page)
+          },
+          ["获取列表成功", "获取列表失败"]
+        );
+      });
     })
     .catch(() => {
       errorCallback(res, "获取文章总数失败!");
@@ -453,7 +462,7 @@ router.post("/api/getArticlesList", (req, res) => {
 /**
  * 获取文章详情
  * @param {_id}         文章id（用于获取文章详情）
- * @param {type}        edit: '后台查看  不计入浏览器次数、获取评论数据',
+ * @param {type}        edit: '后台查看  不计入浏览器次数',
  * @return {detail}
  */
 router.post("/api/getArticlesDetail", (req, res) => {
@@ -461,14 +470,35 @@ router.post("/api/getArticlesDetail", (req, res) => {
     criteria = req.body.release ? { release: req.body.release } : {}; // 查询条件
 
   criteria._id = _id;
-  if (req.body.type !== "edit")
+  if (req.body.type !== "edit") {
     db.Article.update(criteria, { $inc: { browsing: 1 } }, () => {});
+  }
 
-  db.Article.findOne(criteria)
-    .populate("review")
-    .exec((err, result) => {
-      callback(err, res, result, result, ["获取详情成功", "获取详情失败"]);
+  new Promise((resolve, reject) => {
+    // 获取热门文章
+    db.Article.find(
+      { release: req.body.release },
+      { title: 1, image_src: 1, categories: 1, review: 1 },
+      { sort: { update_at: -1 }, limit: 3 },
+      (error, result) => {
+        console.log(result);
+        resolve(result);
+      }
+    );
+  }).then(hots => {
+    db.Article.findOne(criteria).exec((err, result) => {
+      callback(
+        err,
+        res,
+        result,
+        {
+          hots: hots,
+          data: result
+        },
+        ["获取详情成功", "获取详情失败"]
+      );
     });
+  });
 });
 
 /**
