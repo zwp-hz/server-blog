@@ -444,10 +444,12 @@ router.post("/api/getArticlesList", (req, res) => {
           result,
           {
             current_page: page,
-            data: {
-              hots: hots,
-              list: result
-            },
+            data: req.body.release
+              ? {
+                  hots: hots,
+                  list: result
+                }
+              : result,
             last_page: Math.ceil(num / per_page)
           },
           ["获取列表成功", "获取列表失败"]
@@ -481,7 +483,6 @@ router.post("/api/getArticlesDetail", (req, res) => {
       { title: 1, image_src: 1, categories: 1, review: 1 },
       { sort: { update_at: -1 }, limit: 3 },
       (error, result) => {
-        console.log(result);
         resolve(result);
       }
     );
@@ -491,10 +492,12 @@ router.post("/api/getArticlesDetail", (req, res) => {
         err,
         res,
         result,
-        {
-          hots: hots,
-          data: result
-        },
+        req.body.type === "edit"
+          ? result
+          : {
+              hots: hots,
+              data: result
+            },
         ["获取详情成功", "获取详情失败"]
       );
     });
