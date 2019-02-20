@@ -377,31 +377,33 @@ router.post("/api/operateArticles", (req, res) => {
 
 /**
  * 获取文章列表
- * @param {categories}  类别
- * @param {searchCnt}   搜索内容
- * @param {release}     用于草稿文章的显示隐藏  false：显示  true：隐藏 默认为false
- * @param {type}        categories: "文章类别"
- * @param {page}        第几页 默认为1
- * @param {per_page}    每页个数 默认为10
+ * @param {String}  categories - 类别
+ * @param {String}  _s - 搜索内容
+ * @param {Boolean} release - 用于草稿文章的显示隐藏  false：显示  true：隐藏 默认为false
+ * @param {Number}  page - 请求页数 默认为1
+ * @param {Number}  per_page - 每页请求个数 默认为12
  * @return {文章列表}
  */
 router.post("/api/getArticlesList", (req, res) => {
-  let categories = req.body.categories, // 文章类别
-    searchCnt = req.body.searchCnt, // 文章搜索内容
+  let categories = req.body.Category, // 文章类别
+    tags = req.body.Tag, // 文章标签
+    searchCnt = req.body._s, // 文章搜索内容
     per_page = Number(req.body.per_page || 12), // 每页个数
     page = Number(req.body.page || 1), // 获取第几页文章列表
-    type = req.body.type || "", // 请求类型
     criteria = req.body.release ? { release: req.body.release } : {}, // 查询条件
     fields = {}, // 控制返回的字段
-    options = { sort: { browsing: -1 }, limit: per_page }, // 控制选项
+    options = {
+      sort: { browsing: -1 },
+      limit: per_page,
+      skip: (page - 1) * per_page
+    }, // 控制选项
     reg = new RegExp(searchCnt, "i"), // 搜索正则匹配
     hots = []; // 热门文章列表
 
   if (categories && categories != "全部") {
     criteria.categories = { $in: [categories] };
-    options.skip = (page - 1) * per_page;
-  } else {
-    options.skip = (page - 1) * per_page;
+  } else if (tags) {
+    criteria.tags = { $in: [tags] };
   }
 
   // 搜索条件设置
