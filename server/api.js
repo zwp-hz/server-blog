@@ -145,6 +145,21 @@ router.post("/api/getTagsList", (req, res) => {
 });
 
 /**
+ * 删除标签
+ * @param {String} id - 标签id
+ * @param {String} type - 类型  category：分类  tag：标签
+ */
+router.post("/api/deleteTag", (req, res) => {
+  let id = req.body.id,
+    type = req.body.type;
+
+  db[type === "tag" ? "Tag" : "Category"].remove({ _id: id }, (err, result) => {
+    console.log(result)
+    callback(err, res, result, {}, ["删除成功", "删除失败"]);
+  });
+});
+
+/**
  * 删除评论
  * @param {articleId}   文章id
  * @param {commentId}   评论id
