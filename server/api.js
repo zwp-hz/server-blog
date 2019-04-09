@@ -3,7 +3,6 @@ const router = express.Router();
 const request = require("request");
 const db = require("./db");
 const common = require("./common");
-const parseString = require("xml2js").parseString;
 const bodyParser = require("body-parser");
 
 // 七牛资源管理
@@ -520,82 +519,5 @@ router.post("/api/getArticlesDetail", (req, res) => {
     });
   });
 });
-
-/**
- * 获取天气信息
- * @param {cityInfo}  城市信息
- * @param {res}       请求来源
- */
-const getWeatherInfo = (cityInfo, res) => {
-  let weather_server = "http://wthrcdn.etouch.cn/WeatherApi?citykey=",
-    weatherJson = {};
-
-  request(
-    {
-      url: weather_server + common.cityKey[cityInfo.region][cityInfo.city],
-      headers: { Connection: "close" },
-      method: "GET",
-      gzip: true
-    },
-    (error, response, data) => {
-      if (response && response.statusCode == 200) {
-        parseString(data, function(err, result) {
-          weatherJson = result.resp;
-        });
-
-        if (weatherJson.error) {
-          errorCallback(res, weatherJson.error);
-          return false;
-        } else {
-          //天气添加汉字拼音
-          weatherJson.forecast.forEach((item, i) => {
-            item.weather.forEach((items, j) => {
-              for (var y in items) {
-                if (y == "day" || y == "night") {
-                  items[y][0]["type_py"] = common.getInitials(
-                    items[y][0].type[0]
-                  );
-                }
-              }
-            });
-          });
-          weatherJson.time = new Date().getTime();
-        }
-      }
-
-      callback(error, res, response, weatherJson, [
-        "获取天气成功",
-        "获取天气失败"
-      ]);
-    }
-  );
-};
-
-/**
- * 获取城市信息
- * @param {ip}        请求的ip地址
- * @param {res}       请求来源
- * @param {fn}        回调函数
- */
-const getCityInfo = (ip, res, fn) => {
-  let options = {
-    url: "http://ip.taobao.com/service/getIpInfo.php?ip=" + ip,
-    headers: { Connection: "close" },
-    method: "GET",
-    json: true
-  };
-
-  request(options, (err, result, data) => {
-    if (!err && data.code === 0) {
-      if (fn) {
-        fn(data.data);
-      } else {
-        getWeatherInfo(data.data, res);
-      }
-    } else {
-      errorCallback(res, "获取城市失败");
-    }
-  });
-};
 
 module.exports = router;
