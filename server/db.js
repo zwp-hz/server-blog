@@ -32,7 +32,7 @@ const articleSchema = new Schema({
   release: Boolean,
   creation_at: Number,
   update_at: Number,
-  review: [
+  comments: [
     {
       type: Schema.Types.ObjectId,
       ref: "comments"
@@ -42,9 +42,19 @@ const articleSchema = new Schema({
 
 const commentSchema = new Schema({
   ip: String,
+  article_id: String,
+  reply_id: String,
+  reply_user: String,
   content: String,
-  nickname: String,
+  user_name: String,
+  email: String,
   city: String,
+  replys: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "comments"
+    }
+  ],
   creation_at: Number
 });
 

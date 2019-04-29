@@ -113,15 +113,15 @@ router.all("/api/bing", (req, res) => {
  * @param {req}     请求相关信息  用于获取请求网络的ip
  * @return {当前城市的天气信息}
  */
-router.all("/api/getWeather", (req, res) => {
-  let ip = req.headers["x-real-ip"]
-    ? req.headers["x-real-ip"]
-    : req.ip.replace(/::ffff:/, "");
+// router.all("/api/getWeather", (req, res) => {
+//   let ip = req.headers["x-real-ip"]
+//     ? req.headers["x-real-ip"]
+//     : req.ip.replace(/::ffff:/, "");
 
-  ip = ip === "::1" ? "115.236.163.114" : ip;
+//   ip = ip === "::1" ? "115.236.163.114" : ip;
 
-  getCityInfo(ip, res);
-});
+//   getCityInfo(ip, res);
+// });
 
 /**
  * 获取分类列表
@@ -153,7 +153,7 @@ router.post("/api/deleteTag", (req, res) => {
     type = req.body.type;
 
   db[type === "tag" ? "Tag" : "Category"].remove({ _id: id }, (err, result) => {
-    console.log(result)
+    console.log(result);
     callback(err, res, result, {}, ["删除成功", "删除失败"]);
   });
 });
@@ -163,68 +163,82 @@ router.post("/api/deleteTag", (req, res) => {
  * @param {articleId}   文章id
  * @param {commentId}   评论id
  */
-// router.post("/api/deleteComment", (req, res) => {
-//   let articleId = req.body.articleId,
-//     commentId = req.body.commentId;
+router.post("/api/deleteComment", (req, res) => {
+  let articleId = req.body.articleId,
+    commentId = req.body.commentId;
 
-//   db.Comment.remove({ _id: commentId }, err => {
-//     if (!err) {
-//       db.Article.update(
-//         { _id: articleId },
-//         { $pull: { review: commentId } },
-//         (error, result) => {
-//           callback(error, res, result, {}, ["删除成功", "删除失败"]);
-//         }
-//       );
-//     }
-//   });
-// });
+  db.Comment.remove({ _id: commentId }, err => {
+    if (!err) {
+      db.Article.update(
+        { _id: articleId },
+        { $pull: { comments: commentId } },
+        (error, result) => {
+          callback(error, res, result, {}, ["删除成功", "删除失败"]);
+        }
+      );
+    }
+  });
+});
 
 /**
  * 发表评论
- * @param {content}     内容
- * @param {nickname}    昵称
+ * @param {String} content - 内容
+ * @param {String}  email - 邮箱
  * @return {status}
  */
-// router.post("/api/setComment", (req, res) => {
-//   let ip = req.headers["x-real-ip"]
-//     ? req.headers["x-real-ip"]
-//     : req.ip.replace(/::ffff:/, "");
-//   ip = ip === "::1" ? "115.236.163.114" : ip;
+router.post("/api/addComment", (req, res) => {
+  let ip = req.headers["x-real-ip"],
+    { id, content, user_name, email, city, reply_user } = req.body;
 
-//   getCityInfo(ip, res, cityInfo => {
-//     let data = {
-//       article_id: req.body.id,
-//       content: req.body.content,
-//       nickname: req.body.nickname,
-//       ip: ip,
-//       city: cityInfo.region + " " + cityInfo.city,
-//       creation_at: Date.parse(new Date())
-//     };
+  if (!content) {
+    errorCallback(res, "评论内容不能为空！");
+  } else {
+    let data = Object.assign(
+        {
+          ip: ip,
+          content: content,
+          user_name: user_name,
+          email: email,
+          city: city,
+          creation_at: Date.parse(new Date())
+        },
+        reply_user
+          ? { reply_id: id, reply_user: reply_user }
+          : { article_id: id }
+      ),
+      comment = new db.Comment(data);
 
-//     let comment = new db.Comment(data);
-
-//     if (!req.body.content) {
-//       errorCallback(res, "评论内容不能为空！");
-//     }
-
-//     comment.save((err, result) => {
-//       if (!err) {
-//         db.Article.update(
-//           { _id: req.body.id },
-//           {
-//             $addToSet: {
-//               review: result._id
-//             }
-//           },
-//           error => {
-//             callback(error, res, result, result, ["评论成功", "评论失败"]);
-//           }
-//         );
-//       }
-//     });
-//   });
-// });
+    comment.save((err, result) => {
+      if (!err) {
+        if (reply_user) {
+          db.Comment.update(
+            { _id: id },
+            {
+              $addToSet: {
+                replys: result._id
+              }
+            },
+            error => {
+              callback(error, res, result, result, ["评论成功", "评论失败"]);
+            }
+          );
+        } else {
+          db.Article.update(
+            { _id: id },
+            {
+              $addToSet: {
+                comments: result._id
+              }
+            },
+            error => {
+              callback(error, res, result, result, ["评论成功", "评论失败"]);
+            }
+          );
+        }
+      }
+    });
+  }
+});
 
 /**
  * 登录验证
@@ -433,7 +447,7 @@ router.post("/api/getArticlesList", (req, res) => {
   // 获取热门文章
   db.Article.find(
     { release: req.body.release },
-    { title: 1, image_src: 1, categories: 1, review: 1 },
+    { title: 1, image_src: 1, categories: 1, comments: 1 },
     { sort: { update_at: -1 }, limit: 3 },
     (error, result) => {
       hots = result;
@@ -452,7 +466,6 @@ router.post("/api/getArticlesList", (req, res) => {
   })
     .then(num => {
       // 获取全部文章列表
-      // .populate("review")  根据id 获取关联的评论数据
       db.Article.find(criteria, fields, options).exec((err, result) => {
         callback(
           err,
@@ -496,27 +509,33 @@ router.post("/api/getArticlesDetail", (req, res) => {
     // 获取热门文章
     db.Article.find(
       { release: req.body.release },
-      { title: 1, image_src: 1, categories: 1, review: 1 },
+      { title: 1, image_src: 1, categories: 1, comments: 1 },
       { sort: { update_at: -1 }, limit: 3 },
       (error, result) => {
         resolve(result);
       }
     );
   }).then(hots => {
-    db.Article.findOne(criteria).exec((err, result) => {
-      callback(
-        err,
-        res,
-        result,
-        req.body.type === "edit"
-          ? result
-          : {
-              hots: hots,
-              data: result
-            },
-        ["获取详情成功", "获取详情失败"]
-      );
-    });
+    db.Article.findOne(criteria)
+      .populate({
+        path: "comments",
+        options: { sort: { creation_at: -1 } },
+        populate: { path: "replys" }
+      })
+      .exec((err, result) => {
+        callback(
+          err,
+          res,
+          result,
+          req.body.type === "edit"
+            ? result
+            : {
+                hots: hots,
+                data: result
+              },
+          ["获取详情成功", "获取详情失败"]
+        );
+      });
   });
 });
 
