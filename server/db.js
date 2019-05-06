@@ -49,6 +49,7 @@ const commentSchema = new Schema({
   user_name: String,
   email: String,
   city: String,
+  avatar: String,
   replys: [
     {
       type: Schema.Types.ObjectId,

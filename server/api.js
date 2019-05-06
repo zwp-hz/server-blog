@@ -188,7 +188,7 @@ router.post("/api/deleteComment", (req, res) => {
  */
 router.post("/api/addComment", (req, res) => {
   let ip = req.headers["x-real-ip"],
-    { id, content, user_name, email, city, reply_user } = req.body;
+    { id, content, user_name, email, city, avatar, reply_user } = req.body;
 
   if (!content) {
     errorCallback(res, "评论内容不能为空！");
@@ -200,6 +200,7 @@ router.post("/api/addComment", (req, res) => {
           user_name: user_name,
           email: email,
           city: city,
+          avatar: avatar,
           creation_at: Date.parse(new Date())
         },
         reply_user
@@ -267,6 +268,40 @@ router.post("/api/login", (req, res) => {
       ]);
     }
   );
+});
+
+/**
+ * 评论头像上传
+ * @return {status}
+ */
+router.post("/api/avatarUpload", (req, res, next) => {
+  // 七牛相关配置信息
+  common.qn_config.bucket = "avatar";
+  let client = qn.create(common.qn_config);
+
+  // 上传单个文件
+  upload.single("file")(req, res, err => {
+    if (err) {
+      return console.error(err);
+    }
+    if (req.file && req.file.buffer) {
+      let file_name = req.file.originalname + "-" + Date.now();
+
+      // 上传到七牛
+      client.upload(
+        req.file.buffer,
+        {
+          key: file_name
+        },
+        (err, result) => {
+          callback(err, res, result, { avatar: file_name }, [
+            "上传成功",
+            "上传失败"
+          ]);
+        }
+      );
+    }
+  });
 });
 
 /**
