@@ -109,21 +109,6 @@ router.all("/api/bing", (req, res) => {
 });
 
 /**
- * 获取天气信息
- * @param {req}     请求相关信息  用于获取请求网络的ip
- * @return {当前城市的天气信息}
- */
-// router.all("/api/getWeather", (req, res) => {
-//   let ip = req.headers["x-real-ip"]
-//     ? req.headers["x-real-ip"]
-//     : req.ip.replace(/::ffff:/, "");
-
-//   ip = ip === "::1" ? "115.236.163.114" : ip;
-
-//   getCityInfo(ip, res);
-// });
-
-/**
  * 获取分类列表
  * @return {分类列表}
  */
@@ -182,7 +167,12 @@ router.post("/api/deleteComment", (req, res) => {
 
 /**
  * 发表评论
+ * @param {String} id - 文章id或评论id
  * @param {String} content - 内容
+ * @param {String} user_name - 昵称
+ * @param {String} city - 城市信息
+ * @param {String} avatar - 头像
+ * @param {String} reply_user - 评论用户
  * @param {String}  email - 邮箱
  * @return {status}
  */
@@ -220,7 +210,7 @@ router.post("/api/addComment", (req, res) => {
               }
             },
             error => {
-              callback(error, res, result, result, ["评论成功", "评论失败"]);
+              callback(error, res, result, result, ["回复成功", "回复失败"]);
             }
           );
         } else {
@@ -236,6 +226,75 @@ router.post("/api/addComment", (req, res) => {
             }
           );
         }
+      }
+    });
+  }
+});
+
+/**
+ * 获取留言列表
+ */
+router.post("/api/getGuestbookList", (req, res) => {
+  db.Guestbook.find({}, {}, { sort: { creation_at: -1 } })
+    .populate({
+      path: "replys"
+    })
+    .exec((err, result) => {
+      callback(err, res, result, result, ["获取留言成功", "获取留言失败"]);
+    });
+});
+
+/**
+ * 发表留言
+ * @param {String} id - 留言id
+ * @param {String} content - 内容
+ * @param {String} user_name - 昵称
+ * @param {String} city - 城市信息
+ * @param {String} avatar - 头像
+ * @param {String} reply_user - 回复用户的昵称
+ * @param {String}  email - 邮箱
+ * @return {status}
+ */
+router.post("/api/addGuestbook", (req, res) => {
+  let ip = req.headers["x-real-ip"],
+    { id, content, user_name, email, city, avatar, reply_user } = req.body;
+
+  if (!content) {
+    errorCallback(res, "留言内容不能为空！");
+  } else {
+    let data = Object.assign(
+        {
+          ip: ip,
+          content: content,
+          user_name: user_name,
+          email: email,
+          city: city,
+          avatar: avatar,
+          creation_at: Date.parse(new Date())
+        },
+        reply_user ? { reply_id: id, reply_user: reply_user } : {}
+      ),
+      guestbook = new db.Guestbook(data);
+
+    guestbook.save((err, result) => {
+      if (!err) {
+        if (reply_user) {
+          db.Guestbook.update(
+            { _id: id },
+            {
+              $addToSet: {
+                replys: result._id
+              }
+            },
+            err => {
+              callback(err, res, result, result, ["回复成功", "回复失败"]);
+            }
+          );
+        } else {
+          callback(err, res, result, result, ["留言成功", "留言失败"]);
+        }
+      } else {
+        errorCallback(res, "留言失败");
       }
     });
   }

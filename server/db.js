@@ -1,10 +1,8 @@
 const mongoose = require("mongoose");
+mongoose.Promise = global.Promise;
 const Schema = mongoose.Schema;
 
-mongoose.connect(
-  "mongodb://127.0.0.1:27017/blog",
-  { useMongoClient: true }
-);
+mongoose.connect("mongodb://127.0.0.1:27017/blog", { useMongoClient: true });
 
 const userSchema = new Schema({
   username: String,
@@ -59,10 +57,29 @@ const commentSchema = new Schema({
   creation_at: Number
 });
 
+const guestbookSchema = new Schema({
+  ip: String,
+  reply_id: String,
+  reply_user: String,
+  content: String,
+  user_name: String,
+  email: String,
+  city: String,
+  avatar: String,
+  replys: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "guestbooks"
+    }
+  ],
+  creation_at: Number
+});
+
 module.exports = {
   User: mongoose.model("user", userSchema),
   Category: mongoose.model("categories", categorySchema),
   Tag: mongoose.model("tags", TagSchema),
   Article: mongoose.model("articles", articleSchema),
-  Comment: mongoose.model("comments", commentSchema)
+  Comment: mongoose.model("comments", commentSchema),
+  Guestbook: mongoose.model("guestbooks", guestbookSchema)
 };
