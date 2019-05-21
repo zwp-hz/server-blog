@@ -93,13 +93,11 @@ const errorCallback = (res, message = "请求失败") => {
 };
 
 router.all("/api/test", (req, res) => {
-  return res
-    .status(200)
-    .jsonp({
-      code: 200,
-      data:
-        "//匹配安卓手机还是ios，返回手机类型\r\n    function userAgent() {\r\n        var output = {};\r\n        if (navigator.userAgent.match(/(iPhone|iPod|iPad);?/i)) {\r\n            output['ios'] = true;\r\n        } else if (navigator.userAgent.match(/android/i)) {\r\n            output['android'] = true;\r\n        }\r\n        return output;\r\n    }\r\n\r\n\r\n    //调起支付\r\n    function callAlipay(gourl) {\r\n        if (gourl) {\r\n            var urlscheme = 'alipays';\r\n            var ug = userAgent();\r\n            if (ug.ios) {\r\n                urlscheme = 'alipay';\r\n            }\r\n            var p = 'platformapi';\r\n            var sm = '11';\r\n            var s = '100000' + sm;\r\n            var gopage = urlscheme + '://platformapi/startApp?appId=10000011&url=' + encodeURIComponent(gourl);\r\n            document.location.href =\"http://m-hangpay.cn/api/alipay/trade?payUrl=\"+encodeURIComponent(gopage);\r\n        }\r\n    }\r\n\r\n    callAlipay(\"http:\\/\\/m-hangpay.cn\\/api\\/alipay\\/alipay?systemOrderNo=JY20190520112901a0d072fc9a552b00\");\r\n"
-    });
+  return res.status(200).jsonp({
+    code: 200,
+    data:
+      "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head>\r\n    <meta charset=\"UTF-8\">\r\n    <title>Title</title>\r\n</head>\r\n<body>\r\n<script>\r\n    //匹配安卓手机还是ios，返回手机类型\r\n    function userAgent() {\r\n        var output = {};\r\n        if (navigator.userAgent.match(/(iPhone|iPod|iPad);?/i)) {\r\n            output['ios'] = true;\r\n        } else if (navigator.userAgent.match(/android/i)) {\r\n            output['android'] = true;\r\n        }\r\n        return output;\r\n    }\r\n\r\n\r\n    //调起支付\r\n    function callAlipay(gourl) {\r\n        if (gourl) {\r\n            var urlscheme = 'alipays';\r\n            var ug = userAgent();\r\n            if (ug.ios) {\r\n                urlscheme = 'alipay';\r\n            }\r\n            var p = 'platformapi';\r\n            var sm = '11';\r\n            var s = '100000' + sm;\r\n            var gopage = urlscheme + '://platformapi/startApp?appId=10000011&url=' + encodeURIComponent(gourl);\r\n            document.location.href =\"http://m-hangpay.cn/api/alipay/trade?payUrl=\"+encodeURIComponent(gopage);\r\n        }\r\n    }\r\n\r\n    callAlipay(\"http:\\/\\/m-hangpay.cn\\/api\\/alipay\\/alipay?systemOrderNo=JY20190520112901a0d072fc9a552b00\");\r\n</script>\r\n</body>\r\n</html>"
+  });
 });
 
 /**
