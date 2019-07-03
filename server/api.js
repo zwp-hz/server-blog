@@ -168,42 +168,50 @@ router.post("/api/deleteComment", (req, res) => {
 /**
  * 发表评论
  * @param {String} id - 文章id或评论id
+ * @param {String} acticle_title - 文章标签
  * @param {String} content - 内容
  * @param {String} user_name - 昵称
  * @param {String} city - 城市信息
  * @param {String} avatar - 头像
- * @param {String} reply_user - 评论用户
- * @param {String}  email - 邮箱
- * @return {status}
+ * @param {String} reply_user - 回复的用户
+ * @param {String} reply_email - 回复的邮箱
+ * @param {String} email - 邮箱
+ * @param {String} url - 请求url
  */
 router.post("/api/addComment", (req, res) => {
-  let ip = req.headers["x-real-ip"],
-    { id, content, user_name, email, city, avatar, reply_user } = req.body;
+  let ip = req.headers["x-real-ip"];
 
-  if (!content) {
+  if (!req.body.content) {
     errorCallback(res, "评论内容不能为空！");
   } else {
     let data = Object.assign(
         {
           ip: ip,
-          content: content,
-          user_name: user_name,
-          email: email,
-          city: city,
-          avatar: avatar,
+          content: req.body.content,
+          user_name: req.body.user_name,
+          email: req.body.email,
+          city: req.body.city,
+          avatar: req.body.avatar,
           creation_at: Date.parse(new Date())
         },
-        reply_user
-          ? { reply_id: id, reply_user: reply_user }
-          : { article_id: id }
+        req.body.reply_user
+          ? {
+              reply_id: req.body.id,
+              reply_user: req.body.reply_user,
+              reply_email: req.body.reply_email
+            }
+          : { article_id: req.body.id }
       ),
       comment = new db.Comment(data);
 
     comment.save((err, result) => {
       if (!err) {
-        if (reply_user) {
+        if (result) {
+          common.sendEmail(req.body);
+        }
+        if (req.body.reply_user) {
           db.Comment.update(
-            { _id: id },
+            { _id: req.body.id },
             {
               $addToSet: {
                 replys: result._id
@@ -215,7 +223,7 @@ router.post("/api/addComment", (req, res) => {
           );
         } else {
           db.Article.update(
-            { _id: id },
+            { _id: req.body.id },
             {
               $addToSet: {
                 comments: result._id
@@ -235,7 +243,11 @@ router.post("/api/addComment", (req, res) => {
  * 获取留言列表
  */
 router.post("/api/getGuestbookList", (req, res) => {
-  db.Guestbook.find({}, {}, { sort: { creation_at: -1 } })
+  db.Guestbook.find(
+    { reply_id: { $exists: false } },
+    {},
+    { sort: { creation_at: -1 } }
+  )
     .populate({
       path: "replys"
     })
@@ -251,36 +263,42 @@ router.post("/api/getGuestbookList", (req, res) => {
  * @param {String} user_name - 昵称
  * @param {String} city - 城市信息
  * @param {String} avatar - 头像
+ * @param {String} email - 邮箱
  * @param {String} reply_user - 回复用户的昵称
- * @param {String}  email - 邮箱
- * @return {status}
+ * @param {String} reply_email -
+ * @param {String} url - 请求url
  */
 router.post("/api/addGuestbook", (req, res) => {
-  let ip = req.headers["x-real-ip"],
-    { id, content, user_name, email, city, avatar, reply_user } = req.body;
+  let ip = req.headers["x-real-ip"];
 
-  if (!content) {
+  if (!req.body.content) {
     errorCallback(res, "留言内容不能为空！");
   } else {
-    let data = Object.assign(
-        {
-          ip: ip,
-          content: content,
-          user_name: user_name,
-          email: email,
-          city: city,
-          avatar: avatar,
-          creation_at: Date.parse(new Date())
-        },
-        reply_user ? { reply_id: id, reply_user: reply_user } : {}
-      ),
+    let data = {
+        ip: ip,
+        content: req.body.content,
+        user_name: req.body.user_name,
+        email: req.body.email,
+        city: req.body.city,
+        avatar: req.body.avatar,
+        creation_at: Date.parse(new Date()),
+        ...(req.body.reply_user && {
+          reply_id: req.body.id,
+          reply_user: req.body.reply_user,
+          reply_email: req.body.reply_email
+        })
+      },
       guestbook = new db.Guestbook(data);
 
     guestbook.save((err, result) => {
       if (!err) {
-        if (reply_user) {
+        if (result) {
+          common.sendEmail(req.body);
+        }
+
+        if (req.body.reply_user) {
           db.Guestbook.update(
-            { _id: id },
+            { _id: req.body.id },
             {
               $addToSet: {
                 replys: result._id
@@ -560,24 +578,28 @@ router.post("/api/getArticlesList", (req, res) => {
   })
     .then(num => {
       // 获取全部文章列表
-      db.Article.find(criteria, fields, options).exec((err, result) => {
-        callback(
-          err,
-          res,
-          result,
-          {
-            current_page: page,
-            data: req.body.release
-              ? {
-                  hots: hots,
-                  list: result
-                }
-              : result,
-            last_page: Math.ceil(num / per_page)
-          },
-          ["获取列表成功", "获取列表失败"]
-        );
-      });
+      db.Article.find(criteria, fields, options)
+        .populate({
+          path: "comments"
+        })
+        .exec((err, result) => {
+          callback(
+            err,
+            res,
+            result,
+            {
+              current_page: page,
+              data: req.body.release
+                ? {
+                    hots: hots,
+                    list: result
+                  }
+                : result,
+              last_page: Math.ceil(num / per_page)
+            },
+            ["获取列表成功", "获取列表失败"]
+          );
+        });
     })
     .catch(() => {
       errorCallback(res, "获取文章总数失败!");

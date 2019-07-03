@@ -43,6 +43,7 @@ const commentSchema = new Schema({
   article_id: String,
   reply_id: String,
   reply_user: String,
+  reply_email: String,
   content: String,
   user_name: String,
   email: String,
