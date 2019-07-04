@@ -138,7 +138,6 @@ router.post("/api/deleteTag", (req, res) => {
     type = req.body.type;
 
   db[type === "tag" ? "Tag" : "Category"].remove({ _id: id }, (err, result) => {
-    console.log(result);
     callback(err, res, result, {}, ["删除成功", "删除失败"]);
   });
 });
@@ -362,7 +361,7 @@ router.post("/api/avatarUpload", (req, res, next) => {
       return console.error(err);
     }
     if (req.file && req.file.buffer) {
-      let file_name = req.file.originalname + "-" + Date.now();
+      let file_name = Date.now() + "-" + req.file.originalname;
 
       // 上传到七牛
       client.upload(
@@ -387,6 +386,7 @@ router.post("/api/avatarUpload", (req, res, next) => {
  */
 router.post("/api/upload", (req, res, next) => {
   // 七牛相关配置信息
+  common.qn_config.bucket = "images";
   let client = qn.create(common.qn_config);
 
   // 上传单个文件

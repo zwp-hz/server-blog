@@ -12,13 +12,13 @@ const qn_config = {
 const upload = multer({
   storage: storage,
   limits: {
-    fieldSize: 10240 // 限制文件在10MB以内
+    fieldSize: 20480 // 限制文件在20MB以内
   },
   fileFilter: function(req, files, callback) {
     // 只允许上传jpg|png|jpeg|gif格式的文件
-    var type =
+    let type =
       "|" + files.mimetype.slice(files.mimetype.lastIndexOf("/") + 1) + "|";
-    var fileTypeValid = "|jpg|png|jpeg|gif|".indexOf(type) !== -1;
+    let fileTypeValid = "|jpg|png|jpeg|gif|".indexOf(type) !== -1;
     callback(null, !!fileTypeValid);
   }
 });
@@ -70,7 +70,7 @@ const sendEmail = data => {
       AccountName: "admin@email.zhuweipeng.top",
       AddressType: 1,
       ReplyToAddress: true,
-      FromAlias: "朱为鹏的网站",
+      FromAlias: "朱为鹏",
       HtmlBody: HtmlBody,
       ToAddress: data.reply_email || "1453928106@qq.com",
       Subject: Subject
