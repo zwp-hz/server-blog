@@ -24,59 +24,61 @@ const upload = multer({
 });
 
 const sendEmail = data => {
-  const AccessKeyId = "LTAIoz8hTvYb4xlC";
-  const AccessKeySecret = "ybCZYywWaeHBFiA2ikoS1OjXfKzkxh";
-  const DM = new ALY.DM({
-    accessKeyId: AccessKeyId,
-    secretAccessKey: AccessKeySecret,
-    endpoint: "https://dm.aliyuncs.com",
-    apiVersion: "2015-11-23"
-  });
+  if (process.env.NODE_ENV === "production") {
+    const AccessKeyId = "LTAIoz8hTvYb4xlC";
+    const AccessKeySecret = "ybCZYywWaeHBFiA2ikoS1OjXfKzkxh";
+    const DM = new ALY.DM({
+      accessKeyId: AccessKeyId,
+      secretAccessKey: AccessKeySecret,
+      endpoint: "https://dm.aliyuncs.com",
+      apiVersion: "2015-11-23"
+    });
 
-  let Subject = "",
-    HtmlBody = "",
-    userHtml = `${data.user_name}<span style="color: #7f7f7f;"><${
-      data.email
-    }></spam>`;
+    let Subject = "",
+      HtmlBody = "",
+      userHtml = `${data.user_name}<span style="color: #7f7f7f;"><${
+        data.email
+      }></spam>`;
 
-  if (data.acticle_title) {
-    Subject = data.reply_email ? "评论回复" : "文章评论";
+    if (data.acticle_title) {
+      Subject = data.reply_email ? "评论回复" : "文章评论";
 
-    if (data.reply_email) {
-      HtmlBody = `<p>${userHtml}回复了你的评论。</p>
+      if (data.reply_email) {
+        HtmlBody = `<p>${userHtml}回复了你的评论。</p>
       <p>回复：${data.content}</p>`;
-    } else {
-      HtmlBody = `<p>${userHtml}评论了文章<a href="${data.url}">${
-        data.acticle_title
-      }</a>。</p>
+      } else {
+        HtmlBody = `<p>${userHtml}评论了文章<a href="${data.url}">${
+          data.acticle_title
+        }</a>。</p>
       <p>评论：${data.content}</p>`;
-    }
-  } else {
-    Subject = data.reply_email ? "留言回复" : "网站留言";
-
-    if (data.reply_email) {
-      HtmlBody = `<p>${userHtml}回复了你的留言。</p>
-      <p>回复：${data.content}</p>`;
+      }
     } else {
-      HtmlBody = `<p>${userHtml}留言了。</p>
+      Subject = data.reply_email ? "留言回复" : "网站留言";
+
+      if (data.reply_email) {
+        HtmlBody = `<p>${userHtml}回复了你的留言。</p>
+      <p>回复：${data.content}</p>`;
+      } else {
+        HtmlBody = `<p>${userHtml}留言了。</p>
       <p>留言：${data.content}</p>`;
+      }
     }
+
+    HtmlBody += `<p>点击链接查看：<a href="${data.url}">${data.url}</a></p>`;
+
+    DM.singleSendMail(
+      {
+        AccountName: "admin@email.zhuweipeng.top",
+        AddressType: 1,
+        ReplyToAddress: true,
+        FromAlias: "朱为鹏",
+        HtmlBody: HtmlBody,
+        ToAddress: data.reply_email || "1453928106@qq.com",
+        Subject: Subject
+      },
+      (err, data) => {}
+    );
   }
-
-  HtmlBody += `<p>点击链接查看：<a href="${data.url}">${data.url}</a></p>`;
-
-  DM.singleSendMail(
-    {
-      AccountName: "admin@email.zhuweipeng.top",
-      AddressType: 1,
-      ReplyToAddress: true,
-      FromAlias: "朱为鹏",
-      HtmlBody: HtmlBody,
-      ToAddress: data.reply_email || "1453928106@qq.com",
-      Subject: Subject
-    },
-    (err, data) => {}
-  );
 };
 
 module.exports = {

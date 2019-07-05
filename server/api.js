@@ -256,6 +256,15 @@ router.post("/api/getGuestbookList", (req, res) => {
 });
 
 /**
+ * 删除留言
+ */
+router.post("/api/deleteGuestbook", (req, res) => {
+  db.Guestbook.remove({ _id: req.body.id }, (err, result) => {
+    callback(err, res, result, {}, ["删除成功", "删除失败"]);
+  });
+});
+
+/**
  * 发表留言
  * @param {String} id - 留言id
  * @param {String} content - 内容
