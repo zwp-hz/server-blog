@@ -90,6 +90,33 @@ const errorCallback = (res, message = "请求失败") => {
     .end();
 };
 
+const uploadFn = (bucket, req, res) => {
+  common.qn_config.bucket = bucket;
+  let client = qn.create(common.qn_config);
+
+  // 上传单个文件
+  upload.single("file")(req, res, err => {
+    if (err) {
+      return console.error(err);
+    }
+    if (req.file && req.file.buffer) {
+      let file_name =
+        (bucket === "avatar" ? Date.now() + "-" : "") + req.file.originalname;
+
+      // 上传到七牛
+      client.upload(
+        req.file.buffer,
+        {
+          key: file_name
+        },
+        (err, result) => {
+          callback(err, res, result, {}, ["上传成功", "上传失败"]);
+        }
+      );
+    }
+  });
+};
+
 /**
  * 必应每日壁纸
  * @return {壁纸url}
@@ -356,66 +383,27 @@ router.post("/api/login", (req, res) => {
 });
 
 /**
+ * 文章图片上传
+ * @return {status}
+ */
+router.post("/api/articleUpload", (req, res, next) => {
+  uploadFn("article", req, res)
+});
+
+/**
  * 评论头像上传
  * @return {status}
  */
 router.post("/api/avatarUpload", (req, res, next) => {
-  // 七牛相关配置信息
-  common.qn_config.bucket = "avatar";
-  let client = qn.create(common.qn_config);
-
-  // 上传单个文件
-  upload.single("file")(req, res, err => {
-    if (err) {
-      return console.error(err);
-    }
-    if (req.file && req.file.buffer) {
-      let file_name = Date.now() + "-" + req.file.originalname;
-
-      // 上传到七牛
-      client.upload(
-        req.file.buffer,
-        {
-          key: file_name
-        },
-        (err, result) => {
-          callback(err, res, result, { avatar: file_name }, [
-            "上传成功",
-            "上传失败"
-          ]);
-        }
-      );
-    }
-  });
+  uploadFn("avatar", req, res)
 });
 
 /**
- * 七牛图片上传
+ * 照片墙图片上传
  * @return {status}
  */
-router.post("/api/upload", (req, res, next) => {
-  // 七牛相关配置信息
-  common.qn_config.bucket = "images";
-  let client = qn.create(common.qn_config);
-
-  // 上传单个文件
-  upload.single("file")(req, res, err => {
-    if (err) {
-      return console.error(err);
-    }
-    if (req.file && req.file.buffer) {
-      // 上传到七牛
-      client.upload(
-        req.file.buffer,
-        {
-          key: req.file.originalname
-        },
-        (err, result) => {
-          callback(err, res, result, {}, ["上传成功", "上传失败"]);
-        }
-      );
-    }
-  });
+router.post("/api/imgUpload", (req, res, next) => {
+  uploadFn("images", req, res)
 });
 
 /**
