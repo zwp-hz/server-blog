@@ -3,8 +3,8 @@ const ALY = require("aliyun-sdk");
 const storage = multer.memoryStorage();
 
 const qn_config = {
-  accessKey: "aw1tj0Z9rVwM2xo3ZbcO249Y6kdoZm7AS5NmQ2oG",
-  secretKey: "-LA_F_5r1-tun9o2KIRzQdjE_t9DIzx7Uw81pd4p",
+  accessKey: "LjRF-xAdsuHVNVRZF06Hh_QbP5q3we_dkiDSPoWb",
+  secretKey: "Ourm9REEBNiRv_MPssmIzsN-9Mmkwe0v9JCq-7XO",
   bucket: "images",
   uploadURL: "http://up-z1.qiniu.com"
 };
