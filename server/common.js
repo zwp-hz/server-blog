@@ -25,6 +25,7 @@ const upload = multer({
 
 const sendEmail = data => {
   if (process.env.NODE_ENV === "production") {
+    
     const AccessKeyId = "";
     const AccessKeySecret = "";
     const DM = new ALY.DM({
